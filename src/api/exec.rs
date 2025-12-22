@@ -2,7 +2,7 @@ use crate::syscall;
 use crate::api::def::{THREAD_ALL_ACCESS, CURRENT_PROCESS};
 use super::types::*;
 
-pub fn create_thread_ex(start: usize, arg: usize) -> Result<isize, String> {
+pub fn create_remote_thread_ex(process_handle: isize, start: usize, arg: usize) -> Result<isize, String> {
     use std::ffi::c_void;
     use obfstr::obfstr;
 
@@ -15,7 +15,7 @@ pub fn create_thread_ex(start: usize, arg: usize) -> Result<isize, String> {
         &mut thread_handle,
         THREAD_ALL_ACCESS,
         core::ptr::null_mut(),
-        CURRENT_PROCESS,
+        process_handle,
         start as *mut c_void,
         arg as *mut c_void,
         0u32,
@@ -30,6 +30,10 @@ pub fn create_thread_ex(start: usize, arg: usize) -> Result<isize, String> {
     }
 
     Ok(thread_handle)
+}
+
+pub fn create_thread_ex(start: usize, arg: usize) -> Result<isize, String> {
+    create_remote_thread_ex(CURRENT_PROCESS, start, arg)
 }
 
 pub fn wait_for_single_object(handle: isize) -> i32 {

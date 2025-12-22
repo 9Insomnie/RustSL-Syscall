@@ -3,29 +3,7 @@ use crate::api::def::{MEM_COMMIT, PAGE_EXECUTE_READWRITE, SECTION_ALL_ACCESS, SE
 use super::types::*;
 
 pub fn alloc_virtual_memory(size: usize, protection: u32) -> Result<*mut u8, String> {
-	use core::ffi::c_void;
-	use obfstr::obfstr;
-
-	let mut base_ptr: *mut c_void = core::ptr::null_mut();
-	let mut region = size;
-	let nt_alloc_hash = crate::dbj2_hash!(b"NtAllocateVirtualMemory");
-
-	let result = syscall!(
-		nt_alloc_hash,
-		NtAllocateVirtualMemoryFn,
-		-1isize,
-		&mut base_ptr,
-		0usize,
-		&mut region,
-		MEM_COMMIT,
-		protection
-	);
-
-	match result {
-		Some(status) if status >= 0 => Ok(base_ptr as *mut u8),
-		Some(status) => Err(format!("NTSTATUS error: {:#x}", status)),
-		None => Err(obfstr!("Failed to resolve or execute syscall").to_string()),
-	}
+	alloc_virtual_memory_at(-1, 0, size, protection).map(|addr| addr as *mut u8)
 }
 
 pub fn alloc_virtual_memory_at(process_handle: isize, base_addr: usize, size: usize, protection: u32) -> Result<usize, String> {

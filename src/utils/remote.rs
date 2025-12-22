@@ -61,25 +61,6 @@ pub unsafe fn get_remote_module_base(process_handle: isize, dll_name_hash: u32) 
             break;
         }
 
-        // LDR_DATA_TABLE_ENTRY structure (partial, based on InMemoryOrderLinks)
-        // InMemoryOrderLinks is at offset 0x10 in LDR_DATA_TABLE_ENTRY
-        // So BaseDllName is at offset 0x58 - 0x10 = 0x48 relative to current_entry?
-        // Let's check offsets for x64:
-        // LDR_DATA_TABLE_ENTRY:
-        //   0x00 InLoadOrderLinks
-        //   0x10 InMemoryOrderLinks  <-- current_entry points here
-        //   0x20 InInitializationOrderLinks
-        //   0x30 DllBase
-        //   0x38 EntryPoint
-        //   0x40 SizeOfImage
-        //   0x48 FullDllName
-        //   0x58 BaseDllName
-        
-        // So DllBase is at current_entry + 0x20 (0x30 - 0x10)
-        // BaseDllName is at current_entry + 0x48 (0x58 - 0x10)
-
-        // Read BaseDllName (UNICODE_STRING)
-        // UNICODE_STRING: Length (2), MaximumLength (2), Buffer (8)
         let name_struct_addr = current_entry + 0x48;
         let mut name_struct_buf = [0u8; 16]; // 2+2+4(padding)+8
         api::read_virtual_memory(process_handle, name_struct_addr, &mut name_struct_buf)?;
@@ -229,4 +210,34 @@ pub fn find_process_id_by_name(name_hash: u32) -> Result<u32, String> {
 
     let _ = crate::api::free_virtual_memory(-1, buf_ptr, buf_size);
     Err("Process not found".to_string())
+}
+
+pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Result<windows_sys::Win32::System::Threading::PROCESS_INFORMATION, String> {
+    use std::ffi::CString;
+    use windows_sys::Win32::System::Threading::{CreateProcessA, PROCESS_INFORMATION, STARTUPINFOA};
+    use windows_sys::Win32::Foundation::{GetLastError, FALSE};
+
+    let mut startup_info: STARTUPINFOA = std::mem::zeroed();
+    let mut process_info: PROCESS_INFORMATION = std::mem::zeroed();
+    startup_info.cb = std::mem::size_of::<STARTUPINFOA>() as u32;
+
+    let app_name = CString::new(target_program).map_err(|e| e.to_string())?;
+    let success = CreateProcessA(
+        std::ptr::null(),
+        app_name.as_ptr() as *mut u8,
+        std::ptr::null(),
+        std::ptr::null(),
+        0,
+        creation_flags,
+        std::ptr::null(),
+        std::ptr::null(),
+        &startup_info,
+        &mut process_info,
+    );
+
+    if success == FALSE {
+        return Err(format!("CreateProcessA failed: {}", GetLastError()));
+    }
+
+    Ok(process_info)
 }

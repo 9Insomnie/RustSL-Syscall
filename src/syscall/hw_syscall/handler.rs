@@ -2,7 +2,13 @@ use std::sync::atomic::Ordering;
 use windows_sys::Win32::System::Diagnostics::Debug::*;
 use crate::syscall::common::*;
 use super::state::*;
-use super::prepare_syscall;
+
+#[no_mangle]
+#[inline(never)]
+pub extern "C" fn prepare_syscall(_function_hash: u32) -> usize {
+    // RCX = function_hash
+    unsafe { NT_FUNCTION_ADDRESS.load(Ordering::SeqCst) }
+}
 
 pub unsafe extern "system" fn hw_syscall_exception_handler(info: *mut EXCEPTION_POINTERS) -> i32 {
     let ctx = &mut *(*info).ContextRecord;

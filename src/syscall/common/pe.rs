@@ -22,13 +22,24 @@ pub unsafe fn get_nt_headers(module_base: *mut u8) -> Option<*mut IMAGE_NT_HEADE
     Some(nt_headers)
 }
 
-pub unsafe fn get_exports_by_name(module_base: *mut u8) -> BTreeMap<String, usize> {
-    let mut exports = BTreeMap::new();
-    let nt_headers = get_nt_headers(module_base).unwrap();
-    let export_directory = (module_base as usize + (*nt_headers).OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT as usize].VirtualAddress as usize) as *mut IMAGE_EXPORT_DIRECTORY;
+pub unsafe fn get_export_directory_info(module_base: *mut u8) -> Option<(*mut IMAGE_EXPORT_DIRECTORY, &'static [u32], &'static [u32], &'static [u16])> {
+    let nt_headers = get_nt_headers(module_base)?;
+    let export_dir_va = (*nt_headers).OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT as usize].VirtualAddress;
+    if export_dir_va == 0 { return None; }
+    
+    let export_directory = (module_base as usize + export_dir_va as usize) as *mut IMAGE_EXPORT_DIRECTORY;
     let names = core::slice::from_raw_parts((module_base as usize + (*export_directory).AddressOfNames as usize) as *const u32, (*export_directory).NumberOfNames as _);
     let functions = core::slice::from_raw_parts((module_base as usize + (*export_directory).AddressOfFunctions as usize) as *const u32, (*export_directory).NumberOfFunctions as _);
     let ordinals = core::slice::from_raw_parts((module_base as usize + (*export_directory).AddressOfNameOrdinals as usize) as *const u16, (*export_directory).NumberOfNames as _);
+    
+    Some((export_directory, names, functions, ordinals))
+}
+
+pub unsafe fn get_exports_by_name(module_base: *mut u8) -> BTreeMap<String, usize> {
+    let mut exports = BTreeMap::new();
+    let Some((export_directory, names, functions, ordinals)) = get_export_directory_info(module_base) else {
+        return exports;
+    };
 
     for i in 0..(*export_directory).NumberOfNames {
         let name_addr = (module_base as usize + names[i as usize] as usize) as *const i8;
@@ -41,12 +52,7 @@ pub unsafe fn get_exports_by_name(module_base: *mut u8) -> BTreeMap<String, usiz
 }
 
 pub unsafe fn get_export_by_hash(module_base: *mut u8, export_name_hash: u32) -> Option<*mut u8> {
-    let nt_headers = get_nt_headers(module_base)?;
-    
-    let export_directory = (module_base as usize + (*nt_headers).OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT as usize].VirtualAddress as usize) as *mut IMAGE_EXPORT_DIRECTORY;
-    let names = core::slice::from_raw_parts((module_base as usize + (*export_directory).AddressOfNames as usize) as *const u32, (*export_directory).NumberOfNames as _);
-    let functions = core::slice::from_raw_parts((module_base as usize + (*export_directory).AddressOfFunctions as usize) as *const u32, (*export_directory).NumberOfFunctions as _);
-    let ordinals = core::slice::from_raw_parts((module_base as usize + (*export_directory).AddressOfNameOrdinals as usize) as *const u16, (*export_directory).NumberOfNames as _);
+    let (export_directory, names, functions, ordinals) = get_export_directory_info(module_base)?;
 
     for i in 0..(*export_directory).NumberOfNames {
         let name_addr = (module_base as usize + names[i as usize] as usize) as *const i8;

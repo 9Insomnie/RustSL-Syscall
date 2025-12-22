@@ -1,19 +1,9 @@
-pub fn find_syscall_number(function_ptr: *mut u8) -> u16 {
-    let needle: [u8; 4] = [0x4c, 0x8b, 0xd1, 0xb8];
-    let func_slice: &[u8] = unsafe { core::slice::from_raw_parts(function_ptr as *const u8, 6) };
-    if let Some(index) = func_slice.windows(needle.len()).position(|x| *x == needle) {
-        let offset = index + needle.len();
-        return u16::from_le_bytes(func_slice[offset..offset + 2].try_into().unwrap());
-    }
-    0
-}
-
 pub unsafe fn is_syscall_stub(addr: *mut u8) -> bool {
     if addr.is_null() { return false; }
-    let header = addr.read() == 0x4c && addr.add(1).read() == 0x8b 
-        && addr.add(2).read() == 0xd1 && addr.add(3).read() == 0xb8;
-    let footer = addr.add(6).read() == 0x00 && addr.add(7).read() == 0x00;
-    header && footer
+    // Check for: mov r10, rcx; mov eax, <ssn>
+    // 4C 8B D1 B8
+    addr.read() == 0x4C && addr.add(1).read() == 0x8B 
+        && addr.add(2).read() == 0xD1 && addr.add(3).read() == 0xB8
 }
 
 pub unsafe fn extract_ssn(addr: *mut u8) -> u16 {
@@ -39,9 +29,8 @@ pub unsafe fn scan_neighbor_ssn(target_addr: *mut u8, idx: usize, search_up: boo
 }
 
 pub unsafe fn get_ssn(function_ptr: *mut u8) -> Option<u16> {
-    let ssn = find_syscall_number(function_ptr);
-    if ssn != 0 {
-        return Some(ssn);
+    if is_syscall_stub(function_ptr) {
+        return Some(extract_ssn(function_ptr));
     }
 
     #[cfg(feature = "debug")]

