@@ -37,3 +37,24 @@ pub unsafe fn scan_neighbor_ssn(target_addr: *mut u8, idx: usize, search_up: boo
     }
     None
 }
+
+pub unsafe fn get_ssn(function_ptr: *mut u8) -> Option<u16> {
+    let ssn = find_syscall_number(function_ptr);
+    if ssn != 0 {
+        return Some(ssn);
+    }
+
+    #[cfg(feature = "debug")]
+    crate::utils::print_message("SSN not found in prologue, trying neighbor scanning...");
+
+    for i in 1..500 {
+        if let Some(ssn) = scan_neighbor_ssn(function_ptr, i, false) {
+            return Some(ssn);
+        }
+        if let Some(ssn) = scan_neighbor_ssn(function_ptr, i, true) {
+            return Some(ssn);
+        }
+    }
+
+    None
+}

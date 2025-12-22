@@ -5,7 +5,6 @@ use crate::syscall::common::hwbp::{set_hwbp, clear_hwbp, HWBPType, HWBPSize};
 use crate::syscall::common::{env::get_loaded_module_by_hash, pe::get_export_by_hash};
 
 mod handler;
-pub mod ssn_helper;
 
 const NTDLL_HASH: u32 = crate::dbj2_hash!(b"ntdll.dll");
 const NT_ALLOC_HASH: u32 = crate::dbj2_hash!(b"NtAllocateVirtualMemory");

@@ -18,6 +18,11 @@ pub mod hw_syscall;
 #[cfg(feature = "hw_syscall")]
 pub use hw_syscall::get_hw_syscall as get_syscall;
 
+#[cfg(feature = "kfd_syscall")]
+pub mod kfd_syscall;
+#[cfg(feature = "kfd_syscall")]
+pub use kfd_syscall::get_kfd_syscall as get_syscall;
+
 #[macro_export]
 macro_rules! syscall {
     ($func_hash:expr, $fn_type:ty, $($arg:expr),* $(,)?) => {

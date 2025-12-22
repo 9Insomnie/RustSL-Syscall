@@ -1,6 +1,6 @@
 use windows_sys::Win32::System::Diagnostics::Debug::EXCEPTION_POINTERS;
 use crate::api::EXCEPTION_SINGLE_STEP;
-use super::ssn_helper;
+use crate::syscall::common::{get_ssn, find_syscall_instruction};
 
 const EXCEPTION_CONTINUE_EXECUTION: i32 = -1;
 const EXCEPTION_CONTINUE_SEARCH: i32 = 0;
@@ -25,7 +25,7 @@ pub unsafe extern "system" fn exception_handler(
 
             let function_addr = ((*context_record).Rip - 3) as *mut u8;
 
-            if let Some(ssn) = ssn_helper::get_ssn(function_addr) {
+            if let Some(ssn) = get_ssn(function_addr) {
                 #[cfg(feature = "debug")]
                 crate::utils::print_message(&format!("SSN found: {:#x}", ssn));
                 (*context_record).Rax = ssn as u64;
@@ -34,9 +34,9 @@ pub unsafe extern "system" fn exception_handler(
                 crate::utils::print_message("Failed to find SSN!");
             }
 
-            if let Some(syscall_addr) = ssn_helper::get_syscall_instruction_address(function_addr) {
+            if let Some(syscall_addr) = find_syscall_instruction(function_addr) {
                 #[cfg(feature = "debug")]
-                crate::utils::print_message(&format!("Syscall instruction found at: {:#x}", syscall_addr));
+                crate::utils::print_message(&format!("Syscall instruction found at: {:p}", syscall_addr));
                 (*context_record).Rip = syscall_addr as u64;
             } else {
                 #[cfg(feature = "debug")]

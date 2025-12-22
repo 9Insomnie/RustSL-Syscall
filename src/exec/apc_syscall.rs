@@ -1,7 +1,5 @@
 #[allow(non_snake_case)]
 pub unsafe fn exec(p: usize, size: usize) -> Result<(), String> {
-    use obfstr::obfstr;
-
     #[cfg(feature = "debug")]
     crate::utils::print_message(&format!("exec_apc: queueing APC for {:#x}", p));
 

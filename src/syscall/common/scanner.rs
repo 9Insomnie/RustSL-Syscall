@@ -11,3 +11,8 @@ pub fn get_cstr_len(pointer: *const char) -> usize {
     }
     (tmp - pointer as u64) as _
 }
+
+pub unsafe fn find_syscall_instruction(function_ptr: *mut u8) -> Option<*mut u8> {
+    let slice = core::slice::from_raw_parts(function_ptr, 32);
+    slice.windows(2).position(|w| w == [0x0F, 0x05]).map(|pos| function_ptr.add(pos))
+}

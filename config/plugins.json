@@ -35,7 +35,8 @@
   "syscall_methods": [
     { "id": "freshycalls_syswhispers", "label": "FreshyCalls + SysWhispers", "feature": "freshycalls_syswhispers" },
     { "id": "hells_halos_tartarus_gate", "label": "HellsHalos + TartarusGate", "feature": "hells_halos_tartarus_gate" },
-    { "id": "hw_syscall", "label": "Hardware Syscalls", "feature": "hw_syscall" }
+    { "id": "hw_syscall", "label": "Hardware Syscalls", "feature": "hw_syscall" },
+    { "id": "kfd_syscall", "label": "KFD (Indirect Syscalls)", "feature": "kfd_syscall" }
   ],
   "encodings": [
     { "id": "base64", "label": "Base64", "feature": "base64_decode" },

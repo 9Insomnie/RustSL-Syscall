@@ -36,3 +36,22 @@ pub unsafe fn find_suitable_ret_gadget() -> Option<usize> {
     if let Some(addr) = find_ret_gadget(kbase_hash) { return Some(addr); }
     None
 }
+pub unsafe fn find_syscall_gadget(module_base: *mut u8) -> Option<*mut u8> {
+    let nt_headers = get_nt_headers(module_base)?;
+    let image_size = (*nt_headers).OptionalHeader.SizeOfImage as usize;
+    let pattern = [0x0F, 0x05, 0xC3];
+
+    #[cfg(feature = "debug")]
+    crate::utils::print_message("Searching for syscall; ret gadget in ntdll...");
+
+    let gadget = find_pattern(module_base, image_size, &pattern);
+
+    #[cfg(feature = "debug")]
+    if let Some(addr) = gadget {
+        crate::utils::print_message(&format!("Found syscall; ret gadget at {:p}", addr));
+    } else {
+        crate::utils::print_error("Scanner", &"Failed to find syscall; ret gadget");
+    }
+
+    gadget
+}

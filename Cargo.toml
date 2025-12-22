@@ -98,6 +98,8 @@ alloc_mem_nt_map_view_of_section = []
 # 注入/执行方式
 pattern1 = []
 pattern2 = []
+
+kfd_syscall = []
 pattern3 = []
 run_nt_create_thread_ex = ["pattern1"]          # CreateThread注入
 run_apc_syscall = ["pattern1"]               # APC注入
