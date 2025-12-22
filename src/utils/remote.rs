@@ -214,12 +214,15 @@ pub fn find_process_id_by_name(name_hash: u32) -> Result<u32, String> {
 
 pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Result<windows_sys::Win32::System::Threading::PROCESS_INFORMATION, String> {
     use std::ffi::CString;
-    use windows_sys::Win32::System::Threading::{CreateProcessA, PROCESS_INFORMATION, STARTUPINFOA};
+    use windows_sys::Win32::System::Threading::{CreateProcessA, PROCESS_INFORMATION, STARTUPINFOA, STARTF_USESHOWWINDOW};
+    use windows_sys::Win32::UI::WindowsAndMessaging::SW_HIDE;
     use windows_sys::Win32::Foundation::{GetLastError, FALSE};
 
     let mut startup_info: STARTUPINFOA = std::mem::zeroed();
     let mut process_info: PROCESS_INFORMATION = std::mem::zeroed();
     startup_info.cb = std::mem::size_of::<STARTUPINFOA>() as u32;
+    startup_info.dwFlags = STARTF_USESHOWWINDOW;
+    startup_info.wShowWindow = SW_HIDE as u16;
 
     let app_name = CString::new(target_program).map_err(|e| e.to_string())?;
     let success = CreateProcessA(
@@ -240,4 +243,35 @@ pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Resul
     }
 
     Ok(process_info)
+}
+
+pub unsafe fn get_process_id_by_name(process_name: &str) -> Option<u32> {
+    use windows_sys::Win32::System::Diagnostics::ToolHelp::{CreateToolhelp32Snapshot, Process32First, Process32Next, PROCESSENTRY32, TH32CS_SNAPPROCESS};
+    use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
+
+    let snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if snapshot == INVALID_HANDLE_VALUE {
+        return None;
+    }
+
+    let mut entry: PROCESSENTRY32 = std::mem::zeroed();
+    entry.dwSize = std::mem::size_of::<PROCESSENTRY32>() as u32;
+
+    if Process32First(snapshot, &mut entry) != 0 {
+        loop {
+            let name_bytes: Vec<u8> = entry.szExeFile.iter().map(|&c| c as u8).take_while(|&c| c != 0).collect();
+            if let Ok(name) = String::from_utf8(name_bytes) {
+                if name.to_lowercase() == process_name.to_lowercase() {
+                    CloseHandle(snapshot);
+                    return Some(entry.th32ProcessID);
+                }
+            }
+            if Process32Next(snapshot, &mut entry) == 0 {
+                break;
+            }
+        }
+    }
+
+    CloseHandle(snapshot);
+    None
 }
