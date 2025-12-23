@@ -23,6 +23,23 @@ pub struct SpoofContext {
     pub ruts: usize,           // RtlUserThreadStart
 }
 
+/// Helper function to get spoofing exports from kernel32 and ntdll
+unsafe fn get_spoof_exports(k32_base: *mut u8) -> Option<(usize, usize)> {
+    let ntdll_hash = crate::dbj2_hash!(b"ntdll.dll");
+    let ntdll_base = get_loaded_module_by_hash(ntdll_hash)?;
+    
+    let btit_entry = get_export_by_hash(k32_base, crate::dbj2_hash!(b"BaseThreadInitThunk"))? as usize;
+    let ruts_entry = get_export_by_hash(ntdll_base, crate::dbj2_hash!(b"RtlUserThreadStart"))? as usize;
+    
+    #[cfg(feature = "debug")]
+    {
+        crate::utils::print_message(&format!("BaseThreadInitThunk: {:#x}", btit_entry));
+        crate::utils::print_message(&format!("RtlUserThreadStart: {:#x}", ruts_entry));
+    }
+
+    Some((btit_entry, ruts_entry))
+}
+
 pub unsafe fn get_spoof_context() -> Option<SpoofContext> {
     #[cfg(feature = "debug")]
     crate::utils::print_message("Initializing Stack Spoofing Context (SilentMoonwalk-style)...");
@@ -42,17 +59,7 @@ pub unsafe fn get_spoof_context() -> Option<SpoofContext> {
                 crate::utils::print_message(&format!("Gadget stack offset: {:#x}", offset));
             }
 
-            let ntdll_hash = crate::dbj2_hash!(b"ntdll.dll");
-            let ntdll_base = get_loaded_module_by_hash(ntdll_hash)?;
-            
-            let btit_entry = get_export_by_hash(k32_base, crate::dbj2_hash!(b"BaseThreadInitThunk"))? as usize;
-            let ruts_entry = get_export_by_hash(ntdll_base, crate::dbj2_hash!(b"RtlUserThreadStart"))? as usize;
-            
-            #[cfg(feature = "debug")]
-            {
-                crate::utils::print_message(&format!("BaseThreadInitThunk: {:#x}", btit_entry));
-                crate::utils::print_message(&format!("RtlUserThreadStart: {:#x}", ruts_entry));
-            }
+            let (btit_entry, ruts_entry) = get_spoof_exports(k32_base)?;
 
             return Some(SpoofContext {
                 gadget,
@@ -77,11 +84,7 @@ pub unsafe fn get_spoof_context() -> Option<SpoofContext> {
     #[cfg(feature = "debug")]
     crate::utils::print_message(&format!("Found fallback gadget at: {:#x}", gadget));
 
-    let ntdll_hash = crate::dbj2_hash!(b"ntdll.dll");
-    let ntdll_base = get_loaded_module_by_hash(ntdll_hash)?;
-    
-    let btit_entry = get_export_by_hash(k32_base, crate::dbj2_hash!(b"BaseThreadInitThunk"))? as usize;
-    let ruts_entry = get_export_by_hash(ntdll_base, crate::dbj2_hash!(b"RtlUserThreadStart"))? as usize;
+    let (btit_entry, ruts_entry) = get_spoof_exports(k32_base)?;
 
     // For fallback mode, use conservative offset
     Some(SpoofContext {
@@ -302,7 +305,7 @@ pub unsafe fn direct_invoke_with_spoof(data: &SyscallData, args: &[usize]) -> us
     if let Some(ctx) = get_cached_spoof_context() {
         #[cfg(feature = "debug")]
         crate::utils::print_message(&format!(
-            "Invoking SilentMoonwalk spoofed syscall: SSN={:#x}, Inst={:#x}, Gadget={:#x}, Offset={:#x}",
+            "Invoking spoofed syscall: SSN={:#x}, Inst={:#x}, Gadget={:#x}, Offset={:#x}",
             data.ssn, data.syscall_inst, ctx.gadget, ctx.gadget_offset
         ));
         let result = spoofed_syscall_bridge(data.ssn, data.syscall_inst, args.as_ptr(), args.len(), &ctx);
