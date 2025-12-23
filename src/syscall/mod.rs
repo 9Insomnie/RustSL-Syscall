@@ -31,11 +31,29 @@ macro_rules! syscall {
             let ntdll_base = $crate::syscall::common::get_loaded_module_by_hash(ntdll_hash);
 
             if let Some(base) = ntdll_base {
-                if let Some(addr) = $crate::syscall::get_syscall(base, $func_hash) {
-                    let func: $fn_type = core::mem::transmute(addr);
-                    Some(func($($arg),*))
-                } else {
-                    None
+                #[cfg(any(feature = "freshycalls_syswhispers", feature = "hells_halos_tartarus_gate"))]
+                {
+                    if let Some(data) = $crate::syscall::get_syscall(base, $func_hash) {
+                        use $crate::syscall::common::ToSyscallArg;
+                        let args = [$($arg.to_arg()),*];
+                        let result = $crate::syscall::common::direct_invoke_generic(
+                            &data,
+                            &args
+                        );
+                        Some(result as i32)
+                    } else {
+                        None
+                    }
+                }
+
+                #[cfg(any(feature = "hw_syscall", feature = "kfd_syscall"))]
+                {
+                    if let Some(addr) = $crate::syscall::get_syscall(base, $func_hash) {
+                        let func: $fn_type = core::mem::transmute(addr);
+                        Some(func($($arg),*))
+                    } else {
+                        None
+                    }
                 }
             } else {
                 None

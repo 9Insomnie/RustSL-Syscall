@@ -1,7 +1,7 @@
 pub fn freshycalls_syswhispers(
     module_base: *mut u8,
     module_hash: u32,
-) -> Option<*mut u8> {
+) -> Option<crate::syscall::common::SyscallData> {
     use crate::syscall::common::*;
     use crate::utils::dbj2_hash;
     use std::collections::BTreeMap;
@@ -28,12 +28,28 @@ pub fn freshycalls_syswhispers(
 
             #[cfg(feature = "debug")]
             crate::utils::print_message(&format!(
-                "syscall: matched name={} addr={:#x}",
+                "syscall: matched name={} addr={:#x} ssn={}",
                 name,
-                addr
+                addr,
+                syscall_number
             ));
 
-            return Some(addr_ptr);
+            // Find a 'syscall' instruction nearby or in the module
+            // For simplicity, we can search in the function body or use a global search
+            // Here we search in the function body (first 32 bytes)
+            let syscall_inst = unsafe { find_syscall_instruction(addr_ptr) }
+                .map(|p| p as usize)
+                .unwrap_or_else(|| {
+                    // Fallback: find any syscall instruction in the module
+                    // This is safe for indirect syscalls
+                    unsafe { find_syscall_gadget(module_base).map(|p| p as usize).unwrap_or(0) }
+                });
+
+            return Some(SyscallData {
+                entry: addr,
+                ssn: syscall_number,
+                syscall_inst,
+            });
         }
         syscall_number = syscall_number.wrapping_add(1);
     }

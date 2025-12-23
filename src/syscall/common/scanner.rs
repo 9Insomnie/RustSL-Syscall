@@ -4,6 +4,15 @@ pub unsafe fn find_pattern(start_address: *const u8, len: usize, pattern: &[u8])
         .map(|pos| start_address.add(pos) as *mut u8)
 }
 
+pub unsafe fn find_all_patterns(start_address: *const u8, len: usize, pattern: &[u8]) -> std::vec::Vec<*mut u8> {
+    let data = core::slice::from_raw_parts(start_address, len);
+    data.windows(pattern.len())
+        .enumerate()
+        .filter(|(_, window)| window == &pattern)
+        .map(|(pos, _)| start_address.add(pos) as *mut u8)
+        .collect()
+}
+
 pub fn get_cstr_len(pointer: *const char) -> usize {
     let mut tmp: u64 = pointer as u64;
     unsafe {

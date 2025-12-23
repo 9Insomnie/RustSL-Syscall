@@ -84,6 +84,8 @@ def build_features(params: Dict[str, Any], fmap: Dict[str, Dict[str, str]]) -> L
     if params.get("debug_mode"):
         feats.append("debug")
 
+    feats.append("with_spoofing")
+
     seen = set()
     ordered: List[str] = []
     for f in feats:
