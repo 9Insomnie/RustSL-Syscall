@@ -36,7 +36,7 @@ macro_rules! syscall {
                     if let Some(data) = $crate::syscall::get_syscall(base, $func_hash) {
                         use $crate::syscall::common::ToSyscallArg;
                         let args = [$($arg.to_arg()),*];
-                        let result = $crate::syscall::common::direct_invoke_generic(
+                        let result = $crate::syscall::common::direct_invoke_with_spoof(
                             &data,
                             &args
                         );

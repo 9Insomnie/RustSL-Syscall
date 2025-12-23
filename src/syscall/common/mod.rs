@@ -6,6 +6,7 @@ pub mod scanner;
 pub mod ssn;
 pub mod hwbp;
 pub mod spoof;
+pub mod unwind_info;
 
 pub use pe::*;
 pub use env::*;
@@ -13,6 +14,7 @@ pub use scanner::*;
 pub use ssn::*;
 pub use hwbp::*;
 pub use spoof::*;
+pub use unwind_info::*;
 
 pub mod gadget;
 pub use gadget::*;
