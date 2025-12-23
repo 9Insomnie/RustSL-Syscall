@@ -22,6 +22,18 @@ pub use debug::{
     print_error
 };
 
+pub fn write_debug_log(message: &str) {
+    use std::fs::OpenOptions;
+    use std::io::Write;
+    
+    if let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("rsl_debug.log") {
+        let _ = writeln!(file, "{}", message);
+    }
+}
+
 
 pub fn simple_decrypt(encrypted: &str) -> String {
     use obfstr::obfbytes;

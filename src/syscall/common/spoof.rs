@@ -297,24 +297,20 @@ pub unsafe fn direct_invoke_generic(data: &SyscallData, args: &[usize]) -> usize
 #[allow(dead_code)]
 pub unsafe fn direct_invoke_with_spoof(data: &SyscallData, args: &[usize]) -> usize {
     if data.syscall_inst == 0 {
-        #[cfg(feature = "debug")]
-        crate::utils::print_error("Syscall", &"Invalid syscall instruction address (0)");
+        crate::utils::write_debug_log("Invalid syscall instruction address (0)");
         return 0xC0000001;
     }
 
     if let Some(ctx) = get_cached_spoof_context() {
-        #[cfg(feature = "debug")]
-        crate::utils::print_message(&format!(
+        crate::utils::write_debug_log(&format!(
             "Invoking spoofed syscall: SSN={:#x}, Inst={:#x}, Gadget={:#x}, Offset={:#x}",
             data.ssn, data.syscall_inst, ctx.gadget, ctx.gadget_offset
         ));
         let result = spoofed_syscall_bridge(data.ssn, data.syscall_inst, args.as_ptr(), args.len(), &ctx);
-        #[cfg(feature = "debug")]
-        crate::utils::print_message("Spoofed syscall completed successfully");
+        crate::utils::write_debug_log(&format!("Spoofed syscall completed, result: {:#x}", result));
         result
     } else {
-        #[cfg(feature = "debug")]
-        crate::utils::print_message("Spoof context unavailable, falling back to direct indirect-syscall");
+        crate::utils::write_debug_log("Spoof context unavailable, falling back to direct indirect-syscall");
         direct_syscall_bridge(data.ssn, data.syscall_inst, args.as_ptr(), args.len())
     }
 }

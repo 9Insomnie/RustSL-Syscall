@@ -216,16 +216,37 @@ class LoaderGUI(QWidget):
         run_layout = QVBoxLayout()
         self.run_mode_box = create_run_mode_combobox()
         self.run_mode_box.currentIndexChanged.connect(self.on_run_mode_changed)
+        
+        # Row for target program, parent process, and PPID checkbox
+        target_row = QWidget()
+        target_row_layout = QHBoxLayout()
+        target_row_layout.setContentsMargins(0, 0, 0, 0)
+        
         self.target_input = QLineEdit()
         self.target_input.setPlaceholderText("Input target program path (e.g., C:/Windows/System32/notepad.exe)")
         self.target_input.setText(r"notepad.exe")          
-        self.target_input.hide()          
+        self.target_input.hide()
+        
+        self.parent_input = QLineEdit()
+        self.parent_input.setPlaceholderText("Parent process name (e.g., explorer.exe)")
+        self.parent_input.setText("explorer.exe")
+        self.parent_input.hide()
+        
+        self.ppid_checkbox = QCheckBox()
+        self.ppid_checkbox.hide()
+        
+        target_row_layout.addWidget(self.target_input)
+        target_row_layout.addWidget(self.parent_input)
+        target_row_layout.addWidget(self.ppid_checkbox)
+        target_row.setLayout(target_row_layout)
+        
         self.pid_input = QLineEdit()
         self.pid_input.setPlaceholderText("Input target process ID (e.g., 1234)")
         self.pid_input.setText("0")          
         self.pid_input.hide()          
+        
         run_layout.addWidget(self.run_mode_box)
-        run_layout.addWidget(self.target_input)
+        run_layout.addWidget(target_row)
         run_layout.addWidget(self.pid_input)
         run_group.setLayout(run_layout)
         return run_group
@@ -376,6 +397,8 @@ class LoaderGUI(QWidget):
             target = self.target_box.currentText()
         
         target_program = self.target_input.text().strip() if self.target_input.isVisible() else ""
+        parent_process_name = self.parent_input.text().strip() if self.parent_input.isVisible() else ""
+        enable_ppid_spoofing = self.ppid_checkbox.isChecked() if self.ppid_checkbox.isVisible() else False
         
         target_pid = self.pid_input.text().strip() if self.pid_input.isVisible() else "0"
         
@@ -395,6 +418,8 @@ class LoaderGUI(QWidget):
             'default_payload_address': default_payload_address,
             'target': target,
             'target_program': target_program,
+            'parent_process_name': parent_process_name,
+            'enable_ppid_spoofing': enable_ppid_spoofing,
             'target_pid': target_pid,
             'syscall_method': self.syscall_box.itemData(self.syscall_box.currentIndex()),
             'win7_compat': self.win7_checkbox.isChecked(),
@@ -455,12 +480,18 @@ class LoaderGUI(QWidget):
                 pattern = rm.get('pattern', 1)
                 if pattern == 2:
                     self.target_input.show()
+                    self.parent_input.show()
+                    self.ppid_checkbox.show()
                     self.pid_input.hide()
                 elif pattern == 3:
                     self.target_input.hide()
+                    self.parent_input.hide()
+                    self.ppid_checkbox.hide()
                     self.pid_input.show()
                 else:
                     self.target_input.hide()
+                    self.parent_input.hide()
+                    self.ppid_checkbox.hide()
                     self.pid_input.hide()
                 break
 

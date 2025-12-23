@@ -34,14 +34,17 @@ macro_rules! syscall {
                 #[cfg(any(feature = "freshycalls_syswhispers", feature = "hells_halos_tartarus_gate"))]
                 {
                     if let Some(data) = $crate::syscall::get_syscall(base, $func_hash) {
+                        $crate::utils::write_debug_log(&format!("Syscall data found: SSN={:#x}, entry={:#x}, inst={:#x}", data.ssn, data.entry, data.syscall_inst));
                         use $crate::syscall::common::ToSyscallArg;
                         let args = [$($arg.to_arg()),*];
                         let result = $crate::syscall::common::direct_invoke_with_spoof(
                             &data,
                             &args
                         );
+                        $crate::utils::write_debug_log(&format!("Syscall result: {:#x}", result));
                         Some(result as i32)
                     } else {
+                        $crate::utils::write_debug_log(&format!("get_syscall failed for hash {:#x}", $func_hash));
                         None
                     }
                 }

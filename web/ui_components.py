@@ -48,6 +48,8 @@ class RustSLWebGUI:
         self.run_mode_box = None
         self.target_input = None
         self.pid_input = None
+        self.parent_input = None
+        self.ppid_checkbox = None
         self.load_payload_box = None
         self.mem_mode_box = None
         self.enc_box = None
@@ -202,8 +204,13 @@ class RustSLWebGUI:
             default_rm = _safe_default_id(rm_items, self.defaults.get("run_mode"))
             self.run_mode_box = ui.select(options=rm_opts, value=default_rm, on_change=self._on_run_mode_changed).props("dense options-dense").classes("w-full")
 
-            self.target_input = ui.input(label="Target program path", value="notepad.exe", placeholder="e.g., C:/Windows/System32/notepad.exe").props("dense").classes("w-full")
+            with ui.row():
+                self.target_input = ui.input(label="Target program path", value="notepad.exe", placeholder="e.g., C:/Windows/System32/notepad.exe").props("dense").classes("flex-1")
+                self.parent_input = ui.input(label="Parent process name", value="explorer.exe", placeholder="e.g., explorer.exe").props("dense").classes("flex-1")
+                self.ppid_checkbox = ui.checkbox(value=False).classes("ml-4")
             self.target_input.visible = False
+            self.parent_input.visible = False
+            self.ppid_checkbox.visible = False
             self.pid_input = ui.input(label="Target process ID", value="0", placeholder="e.g., 1234").props("dense").classes("w-full")
             self.pid_input.visible = False
             self._on_run_mode_changed(type("obj", (), {"value": default_rm}))
@@ -307,6 +314,8 @@ class RustSLWebGUI:
                 pattern = rm.get("pattern", 1)
                 break
         self.target_input.visible = (pattern == 2)
+        self.parent_input.visible = (pattern == 2)
+        self.ppid_checkbox.visible = (pattern == 2)
         self.pid_input.visible = (pattern == 3)
 
     def _on_bin_selected(self, e):
@@ -357,6 +366,8 @@ class RustSLWebGUI:
             "default_payload_address": self.payload_address_input.value if self.payload_address_input.visible else "",
             "target": self.target_box.value,
             "target_program": self.target_input.value if self.target_input.visible else "",
+            "parent_process_name": self.parent_input.value if self.parent_input.visible else "",
+            "enable_ppid_spoofing": self.ppid_checkbox.value if self.ppid_checkbox.visible else False,
             "target_pid": self.pid_input.value if self.pid_input.visible else "0",
             "syscall_method": self.syscall_box.value,
             "win7_compat": self.win7_checkbox.value,
