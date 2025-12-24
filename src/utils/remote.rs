@@ -250,13 +250,11 @@ pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Resul
                         #[cfg(feature = "debug")]
                         crate::utils::print_message(&format!("Failed to enable SeDebugPrivilege: {}", GetLastError()));
                     }
-                    #[cfg(not(feature = "debug"))]
-                    for _ in 0..1000000 { core::hint::spin_loop(); }
+                    crate::utils::delay_loop();
                 } else {
                     #[cfg(feature = "debug")]
                     crate::utils::print_message(&format!("LookupPrivilegeValueW failed: {}", GetLastError()));
-                    #[cfg(not(feature = "debug"))]
-                    for _ in 0..1000000 { core::hint::spin_loop(); }
+                    crate::utils::delay_loop();
                 }
                 CloseHandle(token);
             } else {
@@ -324,12 +322,10 @@ pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Resul
                             #[cfg(feature = "debug")]
                             crate::utils::print_message("PPID spoofing successful");
 
-                            #[cfg(not(feature = "debug"))]
-                            for _ in 0..1000000 { core::hint::spin_loop(); }
+                            crate::utils::delay_loop();
                             DeleteProcThreadAttributeList(attr_list_ptr);
                             CloseHandle(parent_handle);
-                            #[cfg(not(feature = "debug"))]
-                            for _ in 0..1000000 { core::hint::spin_loop(); }
+                            crate::utils::delay_loop();
                             return Ok(process_info);
                         } else {
                             #[cfg(feature = "debug")]

