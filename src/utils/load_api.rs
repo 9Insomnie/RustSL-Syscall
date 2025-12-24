@@ -16,8 +16,6 @@ pub unsafe fn load_library(dll_name: &[u8]) -> Result<isize, String> {
     // Delegate to utils::get::get_loaded_module_by_hash
     if let Some(base) = crate::syscall::common::get_loaded_module_by_hash(module_hash) {
         obfuscation_noise_macro!();
-        #[cfg(feature = "debug")]
-        crate::utils::print_message(&format!("{} {}", obfstr!("Get module handle by custom GetModuleHandle:"), name_trimmed));
         Ok(base as isize)
     } else {
         let dll = LoadLibraryA(dll_name.as_ptr() as *const u8);
@@ -44,15 +42,11 @@ pub unsafe fn get_proc_address(dll: isize, name: &[u8]) -> Result<*const (), Str
     // Delegate to utils::get::get_export_by_hash
     if let Some(addr) = crate::syscall::common::get_export_by_hash(dll as *mut u8, proc_hash) {
         obfuscation_noise_macro!();
-        #[cfg(feature = "debug")]
-        crate::utils::print_message(&format!("{} {}", obfstr!("Get proc address by custom GetProcAddress:"), name_trimmed));
         Ok(addr as *const ())
     } else {
         let addr = GetProcAddress(dll, name.as_ptr() as *const u8);
         if let Some(f) = addr {
             obfuscation_noise_macro!();
-            #[cfg(feature = "debug")]
-            crate::utils::print_message(&format!("{} {}", obfstr!("Get proc address by GetProcAddress:"), name_trimmed));
             Ok(f as *const ())
         } else {
             Err(obfstr!("GetProcAddress failed").to_string())

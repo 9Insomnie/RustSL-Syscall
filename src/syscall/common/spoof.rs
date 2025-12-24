@@ -287,30 +287,32 @@ pub unsafe fn direct_invoke_generic(data: &SyscallData, args: &[usize]) -> usize
         return 0xC0000001;
     }
 
-    // Currently using simplified direct indirect-syscall (no stack gadget manipulation)
-    // This approach is more stable across different Windows versions
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("Invoking indirect-syscall: SSN={:#x}, Inst={:#x}, Args={}", data.ssn, data.syscall_inst, args.len()));
-    
     direct_syscall_bridge(data.ssn, data.syscall_inst, args.as_ptr(), args.len())
 }
 #[allow(dead_code)]
 pub unsafe fn direct_invoke_with_spoof(data: &SyscallData, args: &[usize]) -> usize {
     if data.syscall_inst == 0 {
-        crate::utils::write_debug_log("Invalid syscall instruction address (0)");
+        #[cfg(feature = "debug")]
+        crate::utils::print_error("Syscall", &"Invalid syscall instruction address (0)");
         return 0xC0000001;
     }
 
     if let Some(ctx) = get_cached_spoof_context() {
-        crate::utils::write_debug_log(&format!(
+        #[cfg(feature = "debug")]
+        crate::utils::print_message(&format!(
             "Invoking spoofed syscall: SSN={:#x}, Inst={:#x}, Gadget={:#x}, Offset={:#x}",
             data.ssn, data.syscall_inst, ctx.gadget, ctx.gadget_offset
         ));
+        #[cfg(not(feature = "debug"))]
+        for _ in 0..1000000 { core::hint::spin_loop(); }
         let result = spoofed_syscall_bridge(data.ssn, data.syscall_inst, args.as_ptr(), args.len(), &ctx);
-        crate::utils::write_debug_log(&format!("Spoofed syscall completed, result: {:#x}", result));
+        #[cfg(feature = "debug")]
+        crate::utils::print_message(&format!("Spoofed syscall completed, result: {:#x}", result));
         result
     } else {
-        crate::utils::write_debug_log("Spoof context unavailable, falling back to direct indirect-syscall");
-        direct_syscall_bridge(data.ssn, data.syscall_inst, args.as_ptr(), args.len())
+        #[cfg(feature = "debug")]
+        crate::utils::print_message("Spoof context unavailable, falling back to direct indirect-syscall");
+        let result = direct_syscall_bridge(data.ssn, data.syscall_inst, args.as_ptr(), args.len());
+        result
     }
 }
