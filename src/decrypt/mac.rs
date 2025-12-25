@@ -1,4 +1,4 @@
-use crate::alloc_mem::alloc_mem;
+use crate::alloc::alloc;
 use obfstr::obfstr;
 
 pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
@@ -13,7 +13,7 @@ pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
     let original_len = u32::from_le_bytes([len_bytes[0], len_bytes[1], len_bytes[2], len_bytes[3]]) as usize;
     let addresses_str = std::str::from_utf8(&decoded[hash_len + len_len..]).map_err(|_| obfstr!("invalid utf8").to_string())?;
     let addresses: Vec<&str> = addresses_str.split(',').collect();
-    let p = unsafe { alloc_mem(original_len)? };
+    let p = unsafe { alloc(original_len)? };
     let buf = std::slice::from_raw_parts_mut(p, original_len);
     let mut idx = 0;
     'outer: for mac_str in addresses {

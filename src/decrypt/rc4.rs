@@ -1,4 +1,4 @@
-use crate::alloc_mem::alloc_mem;
+use crate::alloc::alloc;
 use obfstr::obfstr;
 
 pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
@@ -13,7 +13,7 @@ pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
     let key = &decoded[0..key_len];
     let hash = &decoded[key_len..key_len + hash_len];
     let encrypted = &decoded[key_len + hash_len..];
-    let p = unsafe { alloc_mem(encrypted.len())? };
+    let p = unsafe { alloc(encrypted.len())? };
     std::ptr::copy_nonoverlapping(encrypted.as_ptr(), p, encrypted.len());
     let buf = std::slice::from_raw_parts_mut(p, encrypted.len());
     let key_array: &GenericArray<u8, U32> = GenericArray::from_slice(key);

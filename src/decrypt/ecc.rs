@@ -39,7 +39,7 @@ pub fn decrypt(data: &[u8]) -> Result<(*mut u8, usize), Box<dyn std::error::Erro
 
     let plaintext_len = ciphertext.len();
 
-    let ptr = unsafe { crate::alloc_mem::alloc_mem(plaintext_len).map_err(|e| e)? };
+    let ptr = unsafe { crate::alloc::alloc(plaintext_len).map_err(|e| e)? };
     
     if ptr.is_null() {
         return Err("Memory allocation failed".into());
