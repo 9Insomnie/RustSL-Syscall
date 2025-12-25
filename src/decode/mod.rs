@@ -1,6 +1,6 @@
 
 #[allow(dead_code)]
-pub fn decode_payload(data: &[u8]) -> Option<Vec<u8>> {
+pub fn decode(data: &[u8]) -> Option<Vec<u8>> {
     #[cfg(feature = "base32_decode")]
     return {
         let raw = std::str::from_utf8(data).ok()?;

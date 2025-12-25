@@ -1,9 +1,9 @@
 #[cfg(feature = "load_payload_read_file")]
-pub mod read_file;
+pub mod embedded;
 #[cfg(feature = "load_payload_separate")]
 pub mod separate;
 
 #[cfg(feature = "load_payload_read_file")]
-pub use read_file::load_payload;
+pub use embedded::load;
 #[cfg(feature = "load_payload_separate")]
-pub use separate::load_payload;
+pub use separate::load;

