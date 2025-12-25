@@ -65,6 +65,10 @@ fn main() {
     }
     generate_icon_rc();
     embed_resource::compile("icon.rc");
+
+    cc::Build::new()
+        .file("src/asm/gateway.asm")
+        .compile("gateway");
 }
 
 

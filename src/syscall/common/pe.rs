@@ -3,6 +3,7 @@ use windows_sys::Win32::System::{
     Diagnostics::Debug::{IMAGE_DIRECTORY_ENTRY_EXPORT, IMAGE_NT_HEADERS64, IMAGE_SECTION_HEADER},
     SystemServices::{IMAGE_DOS_HEADER, IMAGE_DOS_SIGNATURE, IMAGE_EXPORT_DIRECTORY, IMAGE_NT_SIGNATURE},
 };
+use dinvoke_rs::data::RuntimeFunction;
 
 #[cfg(target_arch = "x86")]
 pub unsafe fn get_nt_headers(module_base: *mut u8) -> Option<*mut windows_sys::Win32::System::Diagnostics::Debug::IMAGE_NT_HEADERS32> {
@@ -76,7 +77,7 @@ pub unsafe fn get_section_base_address(module_base: *mut u8, section_name: &str)
     
     let optional_header_offset = &(*nt_headers).OptionalHeader as *const _ as usize - nt_headers as usize;
     let first_section_offset = optional_header_offset + (*nt_headers).FileHeader.SizeOfOptionalHeader as usize;
-    let mut section_header = (nt_headers as usize + first_section_offset) as *mut IMAGE_SECTION_HEADER;
+    let section_header = (nt_headers as usize + first_section_offset) as *mut IMAGE_SECTION_HEADER;
 
     for _ in 0..number_of_sections {
         let name_bytes = &(*section_header).Name;
@@ -87,8 +88,59 @@ pub unsafe fn get_section_base_address(module_base: *mut u8, section_name: &str)
             return Some(module_base as usize + (*section_header).VirtualAddress as usize);
         }
         
-        section_header = section_header.add(1);
     }
     
     None
+}
+
+/// Returns a pair containing a pointer to the Exception data of an arbitrary module and the size of the
+/// corresponding PE section (.pdata). In case that it fails to retrieve this information, it returns
+/// null values (ptr::null_mut(), 0).
+pub fn get_runtime_table(image_ptr: *mut std::ffi::c_void) -> (*mut RuntimeFunction, u32) {
+    let module_metadata = dinvoke_rs::manualmap::get_pe_metadata(image_ptr as *const u8, false);
+    if module_metadata.is_err() {
+        return (std::ptr::null_mut(), 0);
+    }
+
+    let metadata = module_metadata.unwrap();
+
+    let mut size: u32 = 0;
+    let mut runtime: *mut RuntimeFunction = std::ptr::null_mut();
+    for section in &metadata.sections {
+        let s = std::str::from_utf8(&section.Name).unwrap();
+        if s.contains(".pdata") {
+            let base = image_ptr as isize;
+            runtime = std::ptr::with_exposed_provenance_mut::<RuntimeFunction>((base + section.VirtualAddress as isize) as usize);
+            size = section.SizeOfRawData;
+            return (runtime, size);
+        }
+    }
+
+    (runtime, size)
+}
+
+// Use RuntimeFunction's data to get the size of a function.
+pub fn get_function_size(base_address: usize, function_address: usize) -> (usize, usize) {
+    unsafe {
+        let exception_directory = get_runtime_table(base_address as _);
+        let mut rt = exception_directory.0;
+        if rt == std::ptr::null_mut() {
+            return (0, 0);
+        }
+
+        let items = exception_directory.1 / 12;
+        let mut count = 0;
+        while count < items {
+            let function_start_address = (base_address + (*rt).begin_addr as usize) as *mut u8;
+            let function_end_address = (base_address + (*rt).end_addr as usize) as *mut u8;
+            if function_address >= function_start_address as usize && function_address < function_end_address as usize {
+                return (function_start_address as usize, function_end_address as usize);
+            }
+
+            rt = rt.add(1);
+            count += 1;
+        }
+
+        (0, 0)
+    }
 }

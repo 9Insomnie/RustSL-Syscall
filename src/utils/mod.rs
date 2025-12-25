@@ -46,6 +46,6 @@ pub fn sys_encode_fn_pointer(ptr: usize) -> usize {
 }
 
 pub fn delay_loop() {
-    #[cfg(not(feature = "debug"))]
-    for _ in 0..1000000 { core::hint::spin_loop(); }
+    // #[cfg(not(feature = "debug"))]
+    // for _ in 0..1000000 { core::hint::spin_loop(); }
 }

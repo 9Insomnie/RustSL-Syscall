@@ -90,7 +90,7 @@ pub fn obfuscation_noise_macro(_input: TokenStream) -> TokenStream {
     if add_conditional_branch {
         statements.push(quote! {
             if #branch_condition > 50 {
-                let _cond_var = rand::random::<u64>() * rand::random::<u64>();
+                let _cond_var = rand::random::<u64>().wrapping_mul(rand::random::<u64>());
             } else {
                 let _else_var = rand::random::<f64>().sin();
             }
@@ -119,7 +119,7 @@ pub fn obfuscation_noise_macro(_input: TokenStream) -> TokenStream {
             let arg = rng.gen_range(1..100);
             func_code = quote! {
                 #func_code
-                let _func_result = (|x: i32| x * x * x)(#arg);
+                let _func_result = (|x: i32| x.wrapping_mul(x).wrapping_mul(x))(#arg);
             };
         }
         statements.push(func_code);
@@ -138,7 +138,7 @@ pub fn obfuscation_noise_macro(_input: TokenStream) -> TokenStream {
 
     // Final sum
     statements.push(quote! {
-        let _ = (0..#sum_range).map(|x| x as i32 * x as i32).sum::<i32>();
+        let _ = (0..#sum_range).map(|x| (x as i32).wrapping_mul(x as i32)).sum::<i32>();
     });
 
     // Shuffle statements for randomness

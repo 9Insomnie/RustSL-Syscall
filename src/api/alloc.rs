@@ -18,12 +18,12 @@ pub fn alloc_virtual_memory_at(process_handle: isize, base_addr: usize, size: us
 	let result = syscall!(
 		nt_alloc_hash,
 		NtAllocateVirtualMemoryFn,
-		process_handle,
-		&mut base_ptr,
-		0usize,
-		&mut region,
-		MEM_COMMIT | MEM_RESERVE,
-		protection
+		process_handle as u64,
+		(&mut base_ptr as *mut *mut c_void as u64),
+		0usize as u64,
+		(&mut region as *mut usize as u64),
+		(MEM_COMMIT | MEM_RESERVE) as u64,
+		protection as u64
 	);
 
 	match result {
@@ -46,13 +46,13 @@ pub fn create_section(size: usize, protection: u32) -> Result<isize, String> {
 	let create_status = syscall!(
 		nt_create_hash,
 		NtCreateSectionFn,
-		&mut section_handle,
-		SECTION_ALL_ACCESS,
-		core::ptr::null_mut::<c_void>(),
-		&mut max_size,
-		protection,
-		SEC_COMMIT,
-		0isize
+		(&mut section_handle as *mut isize as u64),
+		SECTION_ALL_ACCESS as u64,
+		core::ptr::null_mut::<c_void>() as u64,
+		(&mut max_size as *mut i64 as u64),
+		protection as u64,
+		SEC_COMMIT as u64,
+		0isize as u64
 	)
 	.ok_or_else(|| obfstr!("Failed to resolve NtCreateSection").to_string())?;
 
@@ -75,11 +75,11 @@ pub fn protect_virtual_memory(process_handle: isize, base_addr: usize, size: usi
     let result = syscall!(
         nt_protect_hash,
         NtProtectVirtualMemoryFn,
-        process_handle,
-        &mut base_ptr,
-        &mut region_size,
-        new_prot,
-        &mut old_prot
+        process_handle as u64,
+        (&mut base_ptr as *mut *mut c_void as u64),
+        (&mut region_size as *mut usize as u64),
+        new_prot as u64,
+        (&mut old_prot as *mut u32 as u64)
     );
 
     match result {
@@ -102,16 +102,16 @@ pub fn map_view_of_section(section_handle: isize, size: usize, protection: u32) 
 	let map_status = syscall!(
 		nt_map_hash,
 		NtMapViewOfSectionFn,
-		section_handle,
-		-1isize,
-		&mut base_ptr,
-		0usize,
-		0usize,
-		core::ptr::null_mut::<i64>(),
-		&mut vs,
-		1u32,
-		0u32,
-		protection
+		section_handle as u64,
+		(-1isize) as u64,
+		(&mut base_ptr as *mut *mut c_void as u64),
+		0usize as u64,
+		0usize as u64,
+		core::ptr::null_mut::<i64>() as u64,
+		(&mut vs as *mut usize as u64),
+		1u32 as u64,
+		0u32 as u64,
+		protection as u64
 	)
 	.ok_or_else(|| obfstr!("Failed to resolve NtMapViewOfSection").to_string())?;
 
@@ -134,10 +134,10 @@ pub fn free_virtual_memory(process_handle: isize, base_addr: *mut u8, size: usiz
 	let status = syscall!(
 		nt_free_hash,
 		NtFreeVirtualMemoryFn,
-		process_handle,
-		&mut base,
-		&mut region_size,
-		MEM_RELEASE
+		process_handle as u64,
+		(&mut base as *mut *mut c_void as u64),
+		(&mut region_size as *mut usize as u64),
+		MEM_RELEASE as u64
 	).ok_or_else(|| obfstr!("Failed to resolve NtFreeVirtualMemory").to_string())?;
 
 	if status < 0 {

