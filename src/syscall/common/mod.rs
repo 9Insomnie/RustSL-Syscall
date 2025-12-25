@@ -17,12 +17,8 @@ pub use spoof::*;
 pub mod gadget;
 pub use gadget::*;
 
-#[derive(Clone, Copy, Debug)]
-pub struct SyscallData {
-    pub entry: usize,
-    pub ssn: u16,
-    pub syscall_inst: usize,
-}
+mod r#type;
+pub use r#type::*;
 
 pub fn is_wow64() -> bool {
     std::mem::size_of::<usize>() == 8

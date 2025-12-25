@@ -12,8 +12,5 @@ pub unsafe fn exec(p: usize, size: usize) -> Result<(), String> {
     #[cfg(feature = "debug")]
     crate::utils::print_message("APC queued via syscall, entering alertable state...");
 
-    // wait 5 seconds to trigger APC
-    let _ = crate::api::delay_execution_seconds(5)?;
-
     Ok(())
 }

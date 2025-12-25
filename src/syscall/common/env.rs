@@ -51,8 +51,6 @@ pub unsafe fn get_loaded_module_by_hash(module_hash: u32) -> Option<*mut u8> {
         let dll_name_trimmed = dll_name_string.trim_matches(char::from(0));
 
         if module_hash == crate::utils::dbj2_hash(dll_name_trimmed.as_bytes()) {
-            #[cfg(feature = "debug")]
-            crate::utils::print_message(&format!("get_loaded_module_by_hash: module matched: base={:p} name={}", (*module_list).DllBase, dll_name_trimmed));
             return Some((*module_list).DllBase as _);
         }
         module_list = (*module_list).InLoadOrderLinks.Flink as *mut LDR_DATA_TABLE_ENTRY;

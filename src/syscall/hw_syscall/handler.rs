@@ -16,10 +16,7 @@ pub unsafe extern "system" fn hw_syscall_exception_handler(info: *mut EXCEPTION_
 
     if rec.ExceptionCode != 0x80000004u32 as i32 { return 0; }
 
-    if ctx.Rip == prepare_syscall as *const () as u64 {
-        #[cfg(feature = "debug")]
-        crate::utils::print_message("HWSyscalls: PrepareSyscall breakpoint triggered");
-        
+    if ctx.Rip == prepare_syscall as *const () as u64 {        
         // read requested hash from atomic to avoid relying on RCX consistency
         let target_hash = TARGET_HASH.load(Ordering::SeqCst);
 

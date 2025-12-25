@@ -63,8 +63,6 @@ pub unsafe fn get_export_by_hash(module_base: *mut u8, export_name_hash: u32) ->
         if export_name_hash == crate::utils::dbj2_hash(name_slice) {
             let ordinal = ordinals[i as usize] as usize;
             let addr = (module_base as usize + functions[ordinal] as usize) as *mut u8;
-            #[cfg(feature = "debug")]
-            crate::utils::print_message(&format!("get_export_by_hash: export matched: {} -> {:p}", String::from_utf8_lossy(name_slice), addr));
             return Some(addr);
         }
     }

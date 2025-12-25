@@ -5,8 +5,6 @@ pub unsafe fn alloc_mem(size: usize) -> Result<*mut u8, String> {
 
     let result = alloc_virtual_memory(size, PAGE_READWRITE);
 
-    crate::utils::delay_loop();
-
     match result {
         Ok(ptr) => Ok(ptr),
         Err(e) => Err(e),

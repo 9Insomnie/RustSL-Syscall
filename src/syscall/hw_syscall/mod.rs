@@ -12,8 +12,8 @@ pub unsafe fn get_hw_syscall(
     _module_base: *mut u8,
     module_hash: u32,
 ) -> Option<*mut u8> {
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("HWSyscalls: Resolving hash {:#x}", module_hash));
+    // #[cfg(feature = "debug")]
+    // crate::utils::print_message(&format!("HWSyscalls: Resolving hash {:#x}", module_hash));
     
     // store the requested hash in an atomic so VEH reads a stable value
     TARGET_HASH.store(module_hash, Ordering::SeqCst);

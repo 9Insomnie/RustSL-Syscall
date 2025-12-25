@@ -7,8 +7,8 @@ use super::state::*;
 use super::handler::{hw_syscall_exception_handler, prepare_syscall};
 
 pub unsafe fn init_hw_syscalls() -> bool {
-    #[cfg(feature = "debug")]
-    crate::utils::print_message("HWSyscalls: Initializing...");
+    // #[cfg(feature = "debug")]
+    // crate::utils::print_message("HWSyscalls: Initializing...");
 
     let ntdll_ptr = get_loaded_module_by_hash(crate::dbj2_hash!(b"ntdll.dll"))
         .expect("Unable to load ntdll");

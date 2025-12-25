@@ -34,7 +34,7 @@ pub unsafe fn get_ssn(function_ptr: *mut u8) -> Option<u16> {
     }
 
     #[cfg(feature = "debug")]
-    crate::utils::print_message("SSN not found in prologue, trying neighbor scanning...");
+    crate::utils::print_error("Error", &"SSN not found in prologue, trying neighbor scanning...");
 
     for i in 1..500 {
         if let Some(ssn) = scan_neighbor_ssn(function_ptr, i, false) {

@@ -10,15 +10,9 @@ pub unsafe extern "system" fn exception_handler(
 ) -> i32 {
     let exception_record = (*exception_info).ExceptionRecord;
     let context_record = (*exception_info).ContextRecord;
-
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("Exception handler called. Code: {:#x}, RIP: {:#x}, Dr0: {:#x}", 
-        (*exception_record).ExceptionCode, (*context_record).Rip, (*context_record).Dr0));
     
     if (*exception_record).ExceptionCode == EXCEPTION_SINGLE_STEP as i32 {
         if (*context_record).Rip == (*context_record).Dr0 {
-            #[cfg(feature = "debug")]
-            crate::utils::print_message("HWBP hit!");
 
             (*context_record).Dr0 = 0;
             (*context_record).Dr7 &= !1;
@@ -30,23 +24,15 @@ pub unsafe extern "system" fn exception_handler(
                 crate::utils::print_message(&format!("SSN found: {:#x}", ssn));
                 (*context_record).Rax = ssn as u64;
             } else {
-                #[cfg(feature = "debug")]
-                crate::utils::print_message("Failed to find SSN!");
             }
 
             if let Some(syscall_addr) = find_syscall_instruction(function_addr) {
-                #[cfg(feature = "debug")]
-                crate::utils::print_message(&format!("Syscall instruction found at: {:p}", syscall_addr));
                 (*context_record).Rip = syscall_addr as u64;
             } else {
-                #[cfg(feature = "debug")]
-                crate::utils::print_message("Failed to find syscall instruction!");
             }
 
             return EXCEPTION_CONTINUE_EXECUTION;
         } else {
-            #[cfg(feature = "debug")]
-            crate::utils::print_message("RIP does not match Dr0");
         }
     } else {
         #[cfg(feature = "debug")]

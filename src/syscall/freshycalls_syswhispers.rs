@@ -26,14 +26,6 @@ pub fn freshycalls_syswhispers(
         if module_hash == dbj2_hash(name.as_bytes()) {
             let addr_ptr = addr as *mut u8;
 
-            #[cfg(feature = "debug")]
-            crate::utils::print_message(&format!(
-                "syscall: matched name={} addr={:#x} ssn={}",
-                name,
-                addr,
-                syscall_number
-            ));
-
             // Find a 'syscall' instruction nearby or in the module
             // For simplicity, we can search in the function body or use a global search
             // Here we search in the function body (first 32 bytes)
@@ -55,7 +47,7 @@ pub fn freshycalls_syswhispers(
     }
 
     #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!(
+    crate::utils::print_error("Error", &format!(
         "syscall: no match found for module_hash={:#x}",
         module_hash
     ));

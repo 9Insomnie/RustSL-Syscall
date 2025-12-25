@@ -27,9 +27,6 @@ pub fn get_stub(ssn: u16, gadget: *mut u8) -> Vec<u8> {
 
 /// Allocates RWX memory and writes the assembly stub
 pub unsafe fn create_indirect_stub(ssn: u16, gadget: *mut u8) -> Option<*mut u8> {
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("KFD: Creating indirect stub for SSN: {:#x} jumping to {:p}", ssn, gadget));
-
     let stub_code = get_stub(ssn, gadget);
 
     // Allocate executable memory for the stub
@@ -48,9 +45,6 @@ pub unsafe fn create_indirect_stub(ssn: u16, gadget: *mut u8) -> Option<*mut u8>
     }
 
     std::ptr::copy_nonoverlapping(stub_code.as_ptr(), stub_ptr as *mut u8, stub_code.len());
-    
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("KFD: Indirect stub created at {:p}", stub_ptr));
 
     Some(stub_ptr as *mut u8)
 }

