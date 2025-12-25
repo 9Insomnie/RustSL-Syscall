@@ -3,7 +3,7 @@ mod utils;
 mod load_payload;
 mod exec;
 mod decrypt;
-mod alloc_mem;
+mod alloc;
 mod decode;
 mod syscall;
 mod api;
