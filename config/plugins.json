@@ -14,7 +14,7 @@
     { "id": "alloc_mem_section", "label": "NtMapViewOfSection", "feature": "alloc_mem_nt_map_view_of_section" }
   ],
   "load_payload_modes": [
-    { "id": "read_file", "label": "Read File", "feature": "load_payload_read_file" },
+    { "id": "read_file", "label": "Embedded", "feature": "load_payload_embedded" },
     { "id": "separate", "label": "Separate", "feature": "load_payload_separate" }
   ],
   "run_modes": [

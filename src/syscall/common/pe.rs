@@ -75,7 +75,7 @@ pub unsafe fn get_section_base_address(module_base: *mut u8, section_name: &str)
     
     let optional_header_offset = &(*nt_headers).OptionalHeader as *const _ as usize - nt_headers as usize;
     let first_section_offset = optional_header_offset + (*nt_headers).FileHeader.SizeOfOptionalHeader as usize;
-    let section_header = (nt_headers as usize + first_section_offset) as *mut IMAGE_SECTION_HEADER;
+    let mut section_header = (nt_headers as usize + first_section_offset) as *mut IMAGE_SECTION_HEADER;
 
     for _ in 0..number_of_sections {
         let name_bytes = &(*section_header).Name;
@@ -86,6 +86,7 @@ pub unsafe fn get_section_base_address(module_base: *mut u8, section_name: &str)
             return Some(module_base as usize + (*section_header).VirtualAddress as usize);
         }
         
+        section_header = section_header.add(1);
     }
     
     None

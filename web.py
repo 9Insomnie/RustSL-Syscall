@@ -26,6 +26,6 @@ def main_page():
 if __name__ in {"__main__", "__mp_main__"}:
     app.add_static_files('/icons', str(ROOT / 'web' / 'icons'))
     app.add_static_files('/static', str(ROOT / 'web' / 'static'))
-    ui.run(title='RustSL by echQoQ', host='127.0.0.1', port=8050, reload=False, favicon=str(ROOT / 'web' / 'icons' / 'icon.ico'))
+    ui.run(title='RustSL--Syscall by echQoQ', host='127.0.0.1', port=8050, reload=False, favicon=str(ROOT / 'web' / 'icons' / 'icon.ico'))
 
 

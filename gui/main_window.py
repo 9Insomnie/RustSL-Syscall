@@ -25,7 +25,7 @@ class LoaderGUI(QWidget):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('RustSL by echQoQ')
+        self.setWindowTitle('RustSL--Syscall by echQoQ')
         self.setMinimumWidth(650)
         self.setWindowIcon(QIcon(os.path.join('gui', 'icons', 'icon.ico')))
         self.setStyleSheet(get_main_stylesheet())
