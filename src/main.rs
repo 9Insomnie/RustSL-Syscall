@@ -10,7 +10,7 @@ mod api;
 #[cfg(feature = "with_bundling")]
 mod bundle;
 #[cfg(feature = "sandbox")]
-mod guard;
+mod sandbox;
 
 use load::load;
 use decrypt::decrypt;
@@ -43,7 +43,7 @@ fn main() {
     start_program();
 
     #[cfg(feature = "sandbox")]
-    if guard::guard_vm() {
+    if sandbox::guard_vm() {
         #[cfg(feature = "debug")] 
         print_message("Sandbox/VM detected. Exiting...");
         exit_program();

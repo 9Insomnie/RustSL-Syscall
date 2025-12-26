@@ -4,12 +4,12 @@ use hkdf::Hkdf;
 use p256::{PublicKey, SecretKey};
 use sha2::Sha256;
 
-pub fn decrypt(data: &[u8]) -> Result<(*mut u8, usize), Box<dyn std::error::Error>> {
+pub fn decrypt(data: &[u8]) -> Result<(usize, usize), String> {
     #[cfg(feature = "debug")]
     crate::utils::print_message("Using ECC decryption...");
 
     if data.len() < 32 + 33 + 12 + 16 {
-        return Err("Data too short".into());
+        return Err("Data too short".to_string());
     }
 
     let priv_key_bytes = &data[0..32];
@@ -30,7 +30,7 @@ pub fn decrypt(data: &[u8]) -> Result<(*mut u8, usize), Box<dyn std::error::Erro
 
     let hkdf = Hkdf::<Sha256>::new(None, shared_secret.raw_secret_bytes().as_ref());
     let mut key_bytes = [0u8; 32];
-    hkdf.expand(&[], &mut key_bytes).map_err(|_| "HKDF expansion failed")?;
+    hkdf.expand(&[], &mut key_bytes).map_err(|_| "HKDF expansion failed".to_string())?;
 
     let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
     let cipher = Aes256Gcm::new(key);
@@ -42,10 +42,10 @@ pub fn decrypt(data: &[u8]) -> Result<(*mut u8, usize), Box<dyn std::error::Erro
 
     let plaintext_len = ciphertext.len();
 
-    let ptr = unsafe { crate::alloc::alloc(plaintext_len).map_err(|e| e)? };
+    let ptr = unsafe { crate::alloc::alloc(plaintext_len).map_err(|e| e.to_string())? };
     
     if ptr.is_null() {
-        return Err("Memory allocation failed".into());
+        return Err("Memory allocation failed".to_string());
     }
 
     unsafe {
@@ -56,10 +56,10 @@ pub fn decrypt(data: &[u8]) -> Result<(*mut u8, usize), Box<dyn std::error::Erro
 
     match cipher.decrypt_in_place_detached(nonce_slice, &[], &mut buffer, tag) {
         Ok(_) => {
-            Ok((ptr, plaintext_len))
+            Ok((ptr as usize, plaintext_len))
         }
         Err(_) => {
-            Err("Decryption failed".into())
+            Err("Decryption failed".to_string())
         }
     }
 }

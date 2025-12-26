@@ -243,10 +243,7 @@ class RustSLWebGUI:
             with self._group_box("Target", "target"):
                 targets = {
                     "x86_64-pc-windows-msvc": "Windows MSVC (x64)",
-                    "i686-pc-windows-msvc": "Windows MSVC (x86)",
                     "x86_64-pc-windows-gnu": "Windows GNU (x64)",
-                    "i686-pc-windows-gnu": "Windows GNU (x86)",
-                    "aarch64-pc-windows-msvc": "Windows MSVC (ARM64)",
                 }
                 self.target_box = ui.select(options=targets, value="x86_64-pc-windows-msvc").props("dense options-dense").classes("w-full")
 

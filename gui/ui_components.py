@@ -155,10 +155,7 @@ def create_target_combobox():
     
     targets = [
         ('x86_64-pc-windows-msvc', 'Windows MSVC (x64)'),
-        ('i686-pc-windows-msvc', 'Windows MSVC (x86)'),
-        ('x86_64-pc-windows-gnu', 'Windows GNU (x64)'),
-        ('i686-pc-windows-gnu', 'Windows GNU (x86)'),
-        ('aarch64-pc-windows-msvc', 'Windows MSVC (ARM64)'),
+        ('x86_64-pc-windows-gnu', 'Windows GNU (x64)')
     ]
     
     for target, label in targets:
