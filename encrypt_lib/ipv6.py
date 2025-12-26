@@ -3,6 +3,7 @@ description = 'Encode binary as IPv6 addresses (comma separated) with leading sh
 
 import hashlib
 import base64
+import binascii
 
 def sha256_bytes(b):
 	sha = hashlib.sha256()
@@ -24,6 +25,8 @@ def process(data, args):
             addr_bytes += b'\x00' * (16 - len(addr_bytes))
         addresses.append(bytes_to_ipv6(addr_bytes))
     hash1 = sha256_bytes(data)
-    len_bytes = len(data).to_bytes(4, 'little')
-    final = hash1 + len_bytes + ','.join(addresses).encode()
-    return final
+    hash_str = binascii.hexlify(hash1).decode()
+    len_str = str(len(data))
+    ipv6_str = ','.join(addresses)
+    final = f"{hash_str},{len_str},{ipv6_str}"
+    return final.encode()

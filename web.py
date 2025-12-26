@@ -11,10 +11,10 @@ if sys.platform.startswith("win"):
 from nicegui import app, ui
 
 ROOT = Path(__file__).resolve().parent
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))
+if str(ROOT / 'web') not in sys.path:
+    sys.path.append(str(ROOT / 'web'))
 
-from ui_components import RustSLWebGUI  # noqa: E402
+from web.ui_components import RustSLWebGUI  # noqa: E402
 
 
 @ui.page('/')
@@ -24,8 +24,8 @@ def main_page():
 
 
 if __name__ in {"__main__", "__mp_main__"}:
-    app.add_static_files('/icons', str(ROOT / 'icons'))
-    app.add_static_files('/static', str(ROOT / 'static'))
-    ui.run(title='RustSL by echQoQ', host='127.0.0.1', port=8050, reload=False, favicon=str(ROOT / 'icons' / 'icon.ico'))
+    app.add_static_files('/icons', str(ROOT / 'web' / 'icons'))
+    app.add_static_files('/static', str(ROOT / 'web' / 'static'))
+    ui.run(title='RustSL by echQoQ', host='127.0.0.1', port=8050, reload=False, favicon=str(ROOT / 'web' / 'icons' / 'icon.ico'))
 
 

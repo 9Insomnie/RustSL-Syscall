@@ -3,7 +3,7 @@ description = 'Interpret binary as sequence of UUIDs (16-byte blocks) with leadi
 
 import uuid
 import hashlib
-import base64
+import binascii
 
 def sha256_bytes(b):
 	sha = hashlib.sha256()
@@ -12,6 +12,7 @@ def sha256_bytes(b):
 
 
 def process(data, args):
+    original_len = len(data)
     # pad to 16-byte multiple
     pad_len = (16 - (len(data) % 16)) % 16
     if pad_len:
@@ -22,6 +23,8 @@ def process(data, args):
         u = uuid.UUID(bytes=block)
         uuids.append(str(u))
     hash1 = sha256_bytes(data)
-    len_bytes = len(data).to_bytes(4, 'little')
-    final = hash1 + len_bytes + ','.join(uuids).encode()
-    return final
+    hash_str = binascii.hexlify(hash1).decode()
+    len_str = str(original_len)
+    uuid_str = ','.join(uuids)
+    final = f"{hash_str},{len_str},{uuid_str}"
+    return final.encode()
