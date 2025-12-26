@@ -27,4 +27,4 @@ def process(data, args):
     len_str = str(original_len)
     uuid_str = ','.join(uuids)
     final = f"{hash_str},{len_str},{uuid_str}"
-    return final.encode()
+    return final.encode('utf-8')

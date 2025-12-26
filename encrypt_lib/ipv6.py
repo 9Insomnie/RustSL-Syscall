@@ -29,4 +29,4 @@ def process(data, args):
     len_str = str(len(data))
     ipv6_str = ','.join(addresses)
     final = f"{hash_str},{len_str},{ipv6_str}"
-    return final.encode()
+    return final.encode('utf-8')
