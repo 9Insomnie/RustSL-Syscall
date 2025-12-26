@@ -29,8 +29,6 @@ pub fn get_stub(ssn: u16, gadget: *mut u8) -> Vec<u8> {
 pub unsafe fn create_indirect_stub(ssn: u16, gadget: *mut u8) -> Option<*mut u8> {
     let stub_code = get_stub(ssn, gadget);
 
-    // Allocate executable memory for the stub
-    // Note: We use VirtualAlloc directly to avoid recursion if syscall! is configured to use KFD
     let stub_ptr = VirtualAlloc(
         std::ptr::null(),
         stub_code.len(),

@@ -60,7 +60,7 @@ lazy_static! {
 }
 
 /// Spoof and call with SyscallData for indirect syscall.
-pub fn spoof_and_call_syscall(data: crate::syscall::common::SyscallData, _func: PVOID, args: Vec<PVOID>) -> PVOID {
+pub fn syscall_with_spoof(data: crate::syscall::common::SyscallData, _func: PVOID, args: Vec<PVOID>) -> PVOID {
     unsafe {
         let mut config: Configuration = std::mem::zeroed();
         let mut black_list: Vec<(u32, u32)> = vec![];

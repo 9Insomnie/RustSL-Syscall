@@ -40,7 +40,7 @@ macro_rules! syscall {
                                 $arg as usize as *mut std::ffi::c_void
                             ),*
                         ];
-                        let result = $crate::syscall::common::spoof_and_call_syscall(data, func as *mut std::ffi::c_void, args_vec);
+                        let result = $crate::syscall::common::syscall_with_spoof(data, func as *mut std::ffi::c_void, args_vec);
                         Some(result as i32)
                     } else {
                         None
