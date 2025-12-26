@@ -6,7 +6,7 @@ pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
 
     use aes_gcm::{Aes256Gcm, Key, Nonce};
     use aes_gcm::aead::{AeadInPlace, KeyInit};
-use obfstr::obfstr;
+    use obfstr::obfstr;
 
     let key_len = 32;  // AES-256 key size
     let nonce_len = 12; // GCM nonce size
