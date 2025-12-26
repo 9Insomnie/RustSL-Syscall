@@ -1,43 +1,36 @@
 use crate::alloc::alloc;
 use obfstr::obfstr;
 pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
-    use aes::Aes256;
-    use cipher::{BlockDecryptMut, KeyIvInit, block_padding::Pkcs7};
-    use sha2::{Sha256, Digest};
-
-    type Aes256CbcDec = cbc::Decryptor<Aes256>;
+    use aes_gcm::{Aes256Gcm, Key, Nonce};
+    use aes_gcm::aead::{Aead, KeyInit};
+    use obfstr::obfstr;
     
     let key_len = 32;  // AES-256 key size
-    let iv_len = 16;   // AES block size
-    let hash_len = 32; // SHA-256 hash size
+    let iv_len = 16;   // GCM nonce size
+    let tag_len = 16;  // GCM tag size
     
-    if decoded.len() < key_len + iv_len + hash_len + 1 {
+    if decoded.len() < key_len + iv_len + tag_len {
         return Err(obfstr!("aes payload too short").to_string());
     }
     
     let key = &decoded[0..key_len];
     let iv = &decoded[key_len..key_len + iv_len];
-    let hash = &decoded[key_len + iv_len..key_len + iv_len + hash_len];
-    let encrypted = &decoded[key_len + iv_len + hash_len..];
+    let tag = &decoded[key_len + iv_len..key_len + iv_len + tag_len];
+    let encrypted = &decoded[key_len + iv_len + tag_len..];
     
-    let p = unsafe { alloc(encrypted.len())? };
-    std::ptr::copy_nonoverlapping(encrypted.as_ptr(), p, encrypted.len());
-    let buf = std::slice::from_raw_parts_mut(p, encrypted.len());
+    let key = Key::<Aes256Gcm>::from_slice(key);
+    let cipher = Aes256Gcm::new(key);
+    let nonce = Nonce::from_slice(iv);
     
-    let cipher = Aes256CbcDec::new_from_slices(key, iv)
-        .map_err(|_| obfstr!("invalid aes key or iv").to_string())?;
-        
-    let pt_len = cipher.decrypt_padded_mut::<Pkcs7>(buf)
-        .map_err(|_| obfstr!("aes decryption failed").to_string())?
-        .len();
+    let mut ciphertext_with_tag = encrypted.to_vec();
+    ciphertext_with_tag.extend_from_slice(tag);
     
-    let mut hasher = Sha256::new();
-    hasher.update(&buf[..pt_len]);
-    let calc_hash = hasher.finalize();
+    let plaintext = cipher.decrypt(nonce, ciphertext_with_tag.as_ref())
+        .map_err(|_| obfstr!("aes decryption failed").to_string())?;
     
-    if hash != calc_hash.as_slice() {
-        return Err(obfstr!("aes hash mismatch").to_string());
-    }
+    let pt_len = plaintext.len();
+    let p = unsafe { alloc(pt_len)? };
+    std::ptr::copy_nonoverlapping(plaintext.as_ptr(), p, pt_len);
     
     Ok((p as usize, pt_len))
 }
