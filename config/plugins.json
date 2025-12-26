@@ -24,7 +24,8 @@
     { "id": "early_exception_inject", "label": "Early Exception Inject", "feature": "run_early_exception_inject", "pattern": 2 },
     { "id": "early_cascade", "label": "Early Cascade Inject", "feature": "run_early_cascade", "pattern": 2 },
     { "id": "entry_point_injection", "label": "Entry Point Injection (EPI)", "feature": "run_entry_point_injection", "pattern": 2 },
-    { "id": "pool_party", "label": "PoolParty (TP_DIRECT)", "feature": "run_pool_party", "pattern": 2 }
+    { "id": "pool_party", "label": "PoolParty (TP_DIRECT)", "feature": "run_pool_party", "pattern": 2 },
+    { "id": "process_hollowing", "label": "Process Hollowing", "feature": "run_process_hollowing", "pattern": 2 }
   ],
   "vm_checks": [
     { "id": "rdtsc_timing", "label": "RDTSC", "feature": "vm_check_rdtsc_timing" },

@@ -64,6 +64,8 @@ pub type NtQuerySystemInformationFn = unsafe extern "system" fn(
 
 pub type NtTestAlertFn = unsafe extern "system" fn() -> i32;
 
+pub type NtGetContextThreadFn = unsafe extern "system" fn(isize, *mut std::ffi::c_void) -> i32;
+
 pub type NtSetContextThreadFn = unsafe extern "system" fn(isize, *const std::ffi::c_void) -> i32;
 
 pub type NtResumeThreadFn = unsafe extern "system" fn(isize, *mut u32) -> i32;
@@ -96,6 +98,10 @@ pub type CreateFileAFn = unsafe extern "system" fn(*const u8, u32, u32, *const c
 pub type WriteFileFn = unsafe extern "system" fn(isize, *const u8, u32, *mut u32, *const c_void) -> i32;
 pub type ReadFileFn = unsafe extern "system" fn(isize, *mut u8, u32, *mut u32, *const c_void) -> i32;
 pub type CloseHandleFn = unsafe extern "system" fn(isize) -> i32;
+
+pub type NtUnmapViewOfSectionFn = unsafe extern "system" fn(
+    isize, *mut c_void
+) -> i32;
 
 pub type NtDuplicateObjectFn = unsafe extern "system" fn(
     isize, isize, isize, *mut isize, u32, u32, u32

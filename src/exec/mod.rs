@@ -32,3 +32,8 @@ pub use crate::exec::entry_point_injection::exec;
 mod pool_party;
 #[cfg(feature = "run_pool_party")]
 pub use crate::exec::pool_party::exec;
+
+#[cfg(feature = "run_process_hollowing")]
+mod process_hollowing;
+#[cfg(feature = "run_process_hollowing")]
+pub use crate::exec::process_hollowing::exec;

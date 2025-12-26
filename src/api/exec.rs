@@ -187,6 +187,24 @@ pub fn test_alert() -> Result<(), String> {
     Ok(())
 }
 
+pub fn get_context_thread(thread_handle: isize, context: *mut std::ffi::c_void) -> Result<(), String> {
+    use obfstr::obfstr;
+
+    let nt_get_context_hash = crate::dbj2_hash!(b"NtGetContextThread");
+
+    let status = syscall!(
+        nt_get_context_hash,
+        NtGetContextThreadFn,
+        thread_handle as u64,
+        context as u64
+    ).ok_or_else(|| obfstr!("Failed to resolve NtGetContextThread").to_string())?;
+
+    if status < 0 {
+        return Err(format!("{}: {:#x}", obfstr!("NtGetContextThread failed"), status));
+    }
+    Ok(())
+}
+
 pub fn set_context_thread(thread_handle: isize, context: *const std::ffi::c_void) -> Result<(), String> {
     use obfstr::obfstr;
 

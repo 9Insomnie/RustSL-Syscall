@@ -122,6 +122,26 @@ pub fn map_view_of_section(section_handle: isize, size: usize, protection: u32) 
 	Ok(base_ptr as *mut u8)
 }
 
+pub fn unmap_view_of_section(process_handle: isize, base_addr: usize) -> Result<(), String> {
+	use core::ffi::c_void;
+	use obfstr::obfstr;
+
+	let nt_unmap_hash = crate::dbj2_hash!(b"NtUnmapViewOfSection");
+
+	let status = syscall!(
+		nt_unmap_hash,
+		NtUnmapViewOfSectionFn,
+		process_handle as u64,
+		(base_addr as *mut c_void) as u64
+	).ok_or_else(|| obfstr!("Failed to resolve NtUnmapViewOfSection").to_string())?;
+
+	if status < 0 {
+		return Err(format!("NtUnmapViewOfSection failed: {:#x}", status));
+	}
+
+	Ok(())
+}
+
 pub fn free_virtual_memory(process_handle: isize, base_addr: *mut u8, size: usize) -> Result<(), String> {
 	use core::ffi::c_void;
 	use obfstr::obfstr;
