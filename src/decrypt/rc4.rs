@@ -2,6 +2,9 @@ use crate::alloc::alloc;
 use obfstr::obfstr;
 
 pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
+    #[cfg(feature = "debug")]
+    crate::utils::print_message("Using RC4 decryption...");
+
     use rc4::{Rc4, StreamCipher, KeyInit};
     use generic_array::{GenericArray, typenum::U32};
     use sha2::{Sha256, Digest};

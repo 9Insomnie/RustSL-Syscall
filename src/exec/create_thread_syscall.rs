@@ -1,5 +1,7 @@
-#[allow(non_camel_case_types, non_snake_case)]
 pub unsafe fn exec(p: usize, size: usize) -> Result<(), String> {
+    #[cfg(feature = "debug")]
+    crate::utils::print_message("Executing via Create Thread Syscall...");
+
     use crate::api::PAGE_EXECUTE_READWRITE;
     crate::api::protect_virtual_memory(-1, p, size, PAGE_EXECUTE_READWRITE)?;
 

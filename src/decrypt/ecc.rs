@@ -5,6 +5,9 @@ use p256::{PublicKey, SecretKey};
 use sha2::Sha256;
 
 pub fn decrypt(data: &[u8]) -> Result<(*mut u8, usize), Box<dyn std::error::Error>> {
+    #[cfg(feature = "debug")]
+    crate::utils::print_message("Using ECC decryption...");
+
     if data.len() < 32 + 33 + 12 + 16 {
         return Err("Data too short".into());
     }

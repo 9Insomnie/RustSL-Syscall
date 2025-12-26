@@ -1,6 +1,9 @@
 use crate::alloc::alloc;
 
 pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
+    #[cfg(feature = "debug")]
+    crate::utils::print_message("Using IPv4 decryption...");
+    
     use sha2::{Sha256, Digest};
     use obfstr::obfstr;
     let data_str = std::str::from_utf8(decoded).map_err(|_| obfstr!("invalid utf8").to_string())?;

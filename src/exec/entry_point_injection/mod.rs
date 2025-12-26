@@ -3,6 +3,9 @@ use crate::api::{PAGE_EXECUTE_READWRITE, PAGE_READWRITE};
 
 #[cfg(feature = "run_entry_point_injection")]
 pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &str) -> Result<(), String> {
+    #[cfg(feature = "debug")]
+    crate::utils::print_message("Executing via Entry Point Injection...");
+   
     // 1. Create Process in Suspended State
     let process_info = crate::utils::remote::create_process(target_program, CREATE_SUSPENDED)?;
 

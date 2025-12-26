@@ -8,6 +8,9 @@ include!("bundle_data.rs");
 
 #[allow(dead_code)]
 pub fn bundlefile() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(feature = "debug")]
+    crate::utils::print_message("Bundling file...");
+
     const CREATE_NO_WINDOW: u32 = 0x08000000;
 
     // Use compile-time environment variable for filename

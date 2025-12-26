@@ -1,9 +1,13 @@
 use crate::alloc_mem::alloc_mem;
-use obfstr::obfstr;
+
 
 pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
+    #[cfg(feature = "debug")]
+    crate::utils::print_message("Using XChaCha20 decryption...");
+
     use chacha20poly1305::{XChaCha20Poly1305, Key, XNonce};
     use chacha20poly1305::aead::{AeadInPlace, KeyInit};
+    use obfstr::obfstr;
 
     let key_len = 32;
     let nonce_len = 24;
