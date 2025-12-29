@@ -205,7 +205,7 @@ class RustSLWebGUI:
             self.run_mode_box = ui.select(options=rm_opts, value=default_rm, on_change=self._on_run_mode_changed).props("dense options-dense").classes("w-full")
 
             with ui.row():
-                self.target_input = ui.input(label="Target program path", value="notepad.exe", placeholder="e.g., C:/Windows/System32/notepad.exe").props("dense").classes("flex-1")
+                self.target_input = ui.input(label="Target program path", value="mstsc.exe", placeholder="e.g., C:/Windows/System32/mstsc.exe").props("dense").classes("flex-1")
                 self.parent_input = ui.input(label="Parent process name", value="explorer.exe", placeholder="e.g., explorer.exe").props("dense").classes("flex-1")
                 self.ppid_checkbox = ui.checkbox(value=False).classes("ml-4")
             self.target_input.visible = False

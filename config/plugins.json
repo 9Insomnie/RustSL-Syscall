@@ -20,7 +20,7 @@
   "run_modes": [
     { "id": "nt_create_thread", "label": "NtCreateThreadEx", "feature": "run_nt_create_thread_ex", "pattern": 1 },
     { "id": "nt_queue_apc_thread", "label": "NtQueueAPCThread", "feature": "run_apc_syscall", "pattern": 1 },
-    { "id": "hook_bypass", "label": "Hook Bypass (Exception)", "feature": "run_hook_bypass", "pattern": 1 },
+    { "id": "hwbp_bypass", "label": "HWBP Bypass (Exception)", "feature": "run_hwbp_bypass", "pattern": 1 },
     { "id": "early_exception_inject", "label": "Early Exception Inject", "feature": "run_early_exception_inject", "pattern": 2 },
     { "id": "early_cascade", "label": "Early Cascade Inject", "feature": "run_early_cascade", "pattern": 2 },
     { "id": "entry_point_injection", "label": "Entry Point Injection (EPI)", "feature": "run_entry_point_injection", "pattern": 2 },

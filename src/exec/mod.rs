@@ -8,10 +8,10 @@ mod apc;
 #[cfg(feature = "run_apc_syscall")]
 pub use crate::exec::apc::exec;
 
-#[cfg(feature = "run_hook_bypass")]
-mod hook_bypass;
-#[cfg(feature = "run_hook_bypass")]
-pub use crate::exec::hook_bypass::exec;
+#[cfg(feature = "run_hwbp_bypass")]
+mod hwbp_bypass;
+#[cfg(feature = "run_hwbp_bypass")]
+pub use crate::exec::hwbp_bypass::exec;
 
 #[cfg(feature = "run_early_exception_inject")]
 mod early_exception;

@@ -42,3 +42,5 @@ pub fn sys_encode_fn_pointer(ptr: usize) -> usize {
     
     encoded
 }
+
+pub mod veh_hwbp;
