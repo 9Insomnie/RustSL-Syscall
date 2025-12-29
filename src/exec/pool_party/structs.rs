@@ -1,4 +1,4 @@
-use crate::api::types::UnicodeString;
+use crate::ntapi::types::UnicodeString;
 use core::ffi::c_void;
 
 #[repr(C)]
