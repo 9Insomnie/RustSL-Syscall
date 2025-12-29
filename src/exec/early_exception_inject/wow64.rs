@@ -94,16 +94,31 @@ pub unsafe fn return_wow64_function_pointer(module_base: *mut u8) -> Option<*mut
             let pointer_array = (module_base as usize + rva as usize) as *mut usize;
             
             for j in 0..entry_count {
-                let ptr_val = *pointer_array.add(j);
+                // Use unaligned reads — section data may not be 8-byte aligned
+                let ptr_val = std::ptr::read_unaligned(pointer_array.add(j));
+
                 if !is_read_only_pointer(module_base, ptr_val as *mut c_void) {
                     continue;
                 }
-                
-                let api = ptr_val as *mut STRING;
-                if (*api).Length as usize == target_name.len() {
-                    let buffer = std::slice::from_raw_parts((*api).Buffer, target_name.len());
+
+                let api = ptr_val as *const STRING;
+                // Read the STRING structure safely (may be unaligned)
+                let api_struct: STRING = std::ptr::read_unaligned(api);
+
+                if api_struct.Length as usize == target_name.len() {
+                    if api_struct.Buffer.is_null() {
+                        continue;
+                    }
+
+                    // SAFETY: buffer points into module .rdata; length is small and validated
+                    let buffer = std::slice::from_raw_parts(api_struct.Buffer, target_name.len());
                     if buffer == target_name {
-                        return Some(*pointer_array.add(j + 1) as *mut c_void);
+                        // Ensure next pointer exists
+                        if j + 1 >= entry_count {
+                            continue;
+                        }
+                        let func_ptr = std::ptr::read_unaligned(pointer_array.add(j + 1));
+                        return Some(func_ptr as *mut c_void);
                     }
                 }
             }

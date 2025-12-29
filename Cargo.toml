@@ -66,6 +66,7 @@ features = [
     "Win32_System_SystemInformation",
     "Win32_System_Kernel",
     "Win32_System_Diagnostics_ToolHelp",
+    "Win32_Storage_FileSystem",
 ]
 
 [build-dependencies]

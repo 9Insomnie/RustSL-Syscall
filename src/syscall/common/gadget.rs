@@ -95,8 +95,11 @@ pub fn find_gadget(module: usize, gadget_frame_size: &mut i32, arg: i32, black_l
             }
 
             while (function_start_address as usize) < (function_end_address as usize) - 3 {
-                if (*(function_start_address as *mut u16) == JMP_RBX && arg == 0) ||
-                    (*(function_start_address as *mut u32) == ADD_RSP && *(function_start_address.add(4)) == 0xc3 && arg == 1) {
+                let u16_val = std::ptr::read_unaligned(function_start_address as *const u16);
+                let u32_val = std::ptr::read_unaligned(function_start_address as *const u32);
+                let next_byte = *function_start_address.add(4);
+                if (u16_val == JMP_RBX && arg == 0) ||
+                    (u32_val == ADD_RSP && next_byte == 0xc3 && arg == 1) {
                     *gadget_frame_size = get_frame_size_normal(module, *rt, false, &mut false);
                     if *gadget_frame_size == 0 {
                         function_start_address = function_start_address.add(1);

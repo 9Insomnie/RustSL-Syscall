@@ -6,8 +6,6 @@ pub use http::http_get;
 pub mod hash;
 pub use hash::dbj2_hash;
 
-pub mod remote;
-
 mod load_api;
 pub use load_api::{
     load_library,

