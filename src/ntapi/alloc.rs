@@ -1,5 +1,5 @@
 use crate::syscall;
-use crate::api::def::{MEM_COMMIT, PAGE_EXECUTE_READWRITE, SECTION_ALL_ACCESS, SEC_COMMIT};
+use crate::ntapi::def::{MEM_COMMIT, PAGE_EXECUTE_READWRITE, SECTION_ALL_ACCESS, SEC_COMMIT};
 use super::types::*;
 
 pub fn alloc_virtual_memory(size: usize, protection: u32) -> Result<*mut u8, String> {
@@ -9,7 +9,7 @@ pub fn alloc_virtual_memory(size: usize, protection: u32) -> Result<*mut u8, Str
 pub fn alloc_virtual_memory_at(process_handle: isize, base_addr: usize, size: usize, protection: u32) -> Result<usize, String> {
 	use core::ffi::c_void;
 	use obfstr::obfstr;
-	use crate::api::def::MEM_RESERVE;
+	use crate::ntapi::def::MEM_RESERVE;
 
 	let mut base_ptr = base_addr as *mut c_void;
 	let mut region = size;
@@ -145,7 +145,7 @@ pub fn unmap_view_of_section(process_handle: isize, base_addr: usize) -> Result<
 pub fn free_virtual_memory(process_handle: isize, base_addr: *mut u8, size: usize) -> Result<(), String> {
 	use core::ffi::c_void;
 	use obfstr::obfstr;
-	use crate::api::def::MEM_RELEASE;
+	use crate::ntapi::def::MEM_RELEASE;
 
 	let mut base = base_addr as *mut c_void;
 	let mut region_size = size;

@@ -21,15 +21,15 @@ mod r#type;
 pub use r#type::*;
 
 pub fn get_process_id_by_name(name_hash: u32) -> Result<u32, String> {
-    use crate::api;
+    use crate::ntapi;
     use obfstr::obfstr;
 
     // Allocate a large buffer (e.g., 1MB)
     let buf_size = 1024 * 1024;
-    let buf_ptr = api::alloc_virtual_memory(buf_size, api::PAGE_READWRITE).map_err(|_| "Alloc failed")? as *mut u8;
+    let buf_ptr = ntapi::alloc_virtual_memory(buf_size, ntapi::PAGE_READWRITE).map_err(|_| "Alloc failed")? as *mut u8;
     
     let mut return_len = 0;
-    let status = api::query_system_information(
+    let status = ntapi::query_system_information(
         5u32, // SystemProcessInformation
         buf_ptr,
         buf_size as u32,
@@ -38,7 +38,7 @@ pub fn get_process_id_by_name(name_hash: u32) -> Result<u32, String> {
 
     if status < 0 {
         // Free memory
-        let _ = api::free_virtual_memory(-1, buf_ptr, buf_size);
+        let _ = ntapi::free_virtual_memory(-1, buf_ptr, buf_size);
         return Err("NtQuerySystemInformation failed".to_string());
     }
 
@@ -60,7 +60,7 @@ pub fn get_process_id_by_name(name_hash: u32) -> Result<u32, String> {
                     // Found it
                     // UniqueProcessId is at offset 0x50 on x64
                     let pid = unsafe { *(curr_ptr.add(0x50) as *const usize) } as u32;
-                    let _ = api::free_virtual_memory(-1, buf_ptr, buf_size);
+                    let _ = ntapi::free_virtual_memory(-1, buf_ptr, buf_size);
                     return Ok(pid);
                 }
             }
@@ -72,7 +72,7 @@ pub fn get_process_id_by_name(name_hash: u32) -> Result<u32, String> {
         offset += next_offset as usize;
     }
 
-    let _ = api::free_virtual_memory(-1, buf_ptr, buf_size);
+    let _ = ntapi::free_virtual_memory(-1, buf_ptr, buf_size);
     Err("Process not found".to_string())
 }
 

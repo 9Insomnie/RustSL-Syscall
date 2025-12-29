@@ -1,5 +1,5 @@
 use crate::syscall;
-use crate::api::def::{THREAD_ALL_ACCESS, CURRENT_PROCESS};
+use crate::ntapi::def::{THREAD_ALL_ACCESS, CURRENT_PROCESS};
 use super::types::*;
 use windows_sys::Win32::Security::*;
 use core::ffi::c_void;
@@ -629,7 +629,7 @@ pub unsafe fn create_process_with_spoofing(target_program: &str, suspended: bool
             let parent_hash = crate::utils::dbj2_hash(parent_name.to_lowercase().as_bytes());
             match crate::syscall::common::get_process_id_by_name(parent_hash) {
                 Ok(parent_pid) => {
-                    match crate::api::open_process(parent_pid, 0x001F0FFF) {
+                    match crate::ntapi::open_process(parent_pid, 0x001F0FFF) {
                         Ok(h) => {
                             Some(h)
                         }
@@ -640,7 +640,7 @@ pub unsafe fn create_process_with_spoofing(target_program: &str, suspended: bool
                             #[cfg(feature = "debug")]
                             crate::utils::print_message("[+] Attempting to enable SeDebugPrivilege and retry opening parent process");
                             if let Ok(_) = enable_debug_privilege() {
-                                match crate::api::open_process(parent_pid, 0x001F0FFF) {
+                                match crate::ntapi::open_process(parent_pid, 0x001F0FFF) {
                                     Ok(h) => {
                                         #[cfg(feature = "debug")]
                                         crate::utils::print_message(&format!("[DEBUG] Retry succeeded, opened parent handle: {:#x}", h));
@@ -676,7 +676,7 @@ pub unsafe fn create_process_with_spoofing(target_program: &str, suspended: bool
     let (process_handle, thread_handle) = create_process(target_program, parent_handle, suspended)?;
 
     if let Some(h) = parent_handle {
-        crate::api::close_handle(h);
+        crate::ntapi::close_handle(h);
     }
 
     let process_info = PROCESS_INFORMATION {

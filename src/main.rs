@@ -6,7 +6,7 @@ mod decrypt;
 mod alloc;
 mod decode;
 mod syscall;
-mod api;
+mod ntapi;
 #[cfg(feature = "with_bundling")]
 mod bundle;
 #[cfg(feature = "sandbox")]
