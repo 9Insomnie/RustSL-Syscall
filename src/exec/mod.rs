@@ -28,11 +28,6 @@ mod entry_point;
 #[cfg(feature = "run_entry_point_injection")]
 pub use crate::exec::entry_point::exec;
 
-#[cfg(feature = "run_pool_party")]
-mod pool_party;
-#[cfg(feature = "run_pool_party")]
-pub use crate::exec::pool_party::exec;
-
 #[cfg(feature = "run_process_hollowing")]
 mod process_hollowing;
 #[cfg(feature = "run_process_hollowing")]

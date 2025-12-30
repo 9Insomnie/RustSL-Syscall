@@ -113,12 +113,11 @@ run_apc_syscall = ["pattern1"]               # APC注入
 run_hwbp_bypass = ["pattern1"]                        # Hook Bypass (KiUserExceptionDispatcherStepOver)
 run_early_exception_inject = ["pattern2"]                       # KiUserExceptionDispatcherInjection
 run_early_cascade = ["pattern2"]                                # Early Cascade Injection
-run_entry_point_injection = ["pattern2"]                        # Entry Point Injection (EPI)
-run_pool_party = ["pattern2"]                                   # PoolParty Injection (TP_DIRECT)
+run_entry_point_injection = ["pattern2"]                        # Entry Point Injection
 run_process_hollowing = ["pattern2"]                             # Process Hollowing
 
 
-with_bundling = []               # 启用伪造特性
+with_bundling = []               # 启用捆绑特性
 ppid_spoofing = []              # 启用PPID伪造特性
 
 # syscall
