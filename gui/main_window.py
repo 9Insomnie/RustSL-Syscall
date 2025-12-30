@@ -223,8 +223,8 @@ class LoaderGUI(QWidget):
         target_row_layout.setContentsMargins(0, 0, 0, 0)
         
         self.target_input = QLineEdit()
-        self.target_input.setPlaceholderText("Input target program path (e.g., C:/Windows/System32/notepad.exe)")
-        self.target_input.setText(r"notepad.exe")          
+        self.target_input.setPlaceholderText("Input target program path (e.g., C:/Windows/System32/mstsc.exe)")
+        self.target_input.setText(r"mstsc.exe")          
         self.target_input.hide()
         
         self.parent_input = QLineEdit()

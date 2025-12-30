@@ -626,6 +626,9 @@ pub unsafe fn create_process_with_spoofing(target_program: &str, suspended: bool
         {
             let parent_name = simple_decrypt(env!("RSL_ENCRYPTED_PARENT_PROCESS_NAME"));
 
+            #[cfg(feature = "debug")]
+            crate::utils::print_message(&format!("[DEBUG] Attempting to spoof parent process: {}", parent_name));
+
             let parent_hash = crate::utils::dbj2_hash(parent_name.to_lowercase().as_bytes());
             match crate::syscall::common::get_process_id_by_name(parent_hash) {
                 Ok(parent_pid) => {

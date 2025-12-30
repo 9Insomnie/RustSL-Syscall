@@ -1,4 +1,3 @@
-#[allow(non_snake_case)]
 pub unsafe fn exec(p: usize, size: usize) -> Result<(), String> {
     #[cfg(feature = "debug")]
     crate::utils::print_message("Executing via APC Syscall...");

@@ -4,8 +4,6 @@ use crate::ntapi::types::*;
 use crate::syscall::common::env::get_loaded_module_by_hash;
 use crate::utils::veh_hwbp::{register_veh, execute_with_hwbp};
 
-
-
 const NTDLL_HASH: u32 = crate::dbj2_hash!(b"ntdll.dll");
 const NT_ALLOC_HASH: u32 = crate::dbj2_hash!(b"NtAllocateVirtualMemory");
 const NT_PROTECT_HASH: u32 = crate::dbj2_hash!(b"NtProtectVirtualMemory");
