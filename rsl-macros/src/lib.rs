@@ -1,9 +1,9 @@
+use base64::{engine::general_purpose, Engine as _};
 use proc_macro::TokenStream;
 use quote::quote;
 use rand::Rng;
-use syn::{parse_macro_input, LitStr};
 use std::env;
-use base64::{Engine as _, engine::general_purpose};
+use syn::{parse_macro_input, LitStr};
 
 /// A procedural macro that generates random obfuscation noise at compile time.
 #[proc_macro]
@@ -134,7 +134,6 @@ pub fn obfuscation_noise_macro(_input: TokenStream) -> TokenStream {
             }
         });
     }
-
 
     // Final sum
     statements.push(quote! {

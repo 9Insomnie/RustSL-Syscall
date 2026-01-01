@@ -22,7 +22,9 @@ impl std::fmt::Display for RslError {
             RslError::DecryptionError(e) => write!(f, "Decryption Error: {}", e),
             RslError::SandboxDetected => write!(f, "Sandbox/VM detected"),
             RslError::ModuleNotFound(hash) => write!(f, "Module not found (hash: 0x{:08X})", hash),
-            RslError::FunctionNotFound(hash) => write!(f, "Function not found (hash: 0x{:08X})", hash),
+            RslError::FunctionNotFound(hash) => {
+                write!(f, "Function not found (hash: 0x{:08X})", hash)
+            }
             RslError::SyscallFailed(hash) => write!(f, "Syscall failed (hash: 0x{:08X})", hash),
             RslError::Other(e) => write!(f, "Error: {}", e),
         }
@@ -35,9 +37,15 @@ impl From<RslError> for String {
 }
 impl std::error::Error for RslError {}
 
-impl From<std::io::Error> for RslError {
-    fn from(e: std::io::Error) -> Self {
-        RslError::IoError(e)
+impl From<&str> for RslError {
+    fn from(s: &str) -> Self {
+        RslError::Other(s.to_string())
+    }
+}
+
+impl From<String> for RslError {
+    fn from(s: String) -> Self {
+        RslError::Other(s)
     }
 }
 

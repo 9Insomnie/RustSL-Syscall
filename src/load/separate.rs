@@ -1,8 +1,8 @@
-use std::env;
-use obfstr::obfstr;
 use crate::utils::simple_decrypt;
+use obfstr::obfstr;
+use std::env;
 
-pub fn load() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn load() -> crate::utils::error::RslResult<Vec<u8>> {
     let args: Vec<String> = env::args().collect();
     let address = if args.len() < 2 || args[1].is_empty() {
         // Decrypt the encrypted default address

@@ -1,7 +1,16 @@
-use crate::syscall;
 use super::types::*;
+use crate::syscall;
 
 pub fn wait_for_single_object(handle: isize) -> i32 {
     let nt_wait_hash = crate::dbj2_hash!(b"NtWaitForSingleObject");
-    unsafe { syscall!(nt_wait_hash, NtWaitForSingleObjectFn, handle as u64, 0u8 as u64, core::ptr::null_mut::<i64>() as u64) }.unwrap_or(-1)
+    unsafe {
+        syscall!(
+            nt_wait_hash,
+            NtWaitForSingleObjectFn,
+            handle as u64,
+            0u8 as u64,
+            core::ptr::null_mut::<i64>() as u64
+        )
+    }
+    .unwrap_or(-1)
 }

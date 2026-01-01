@@ -1,5 +1,5 @@
-use crate::syscall;
 use super::types::*;
+use crate::syscall;
 use obfstr::obfstr;
 
 pub fn close_handle(handle: isize) {
@@ -15,7 +15,7 @@ pub fn duplicate_object(
     desired_access: u32,
     handle_attributes: u32,
     options: u32,
-) -> Result<i32, String> {
+) -> crate::utils::error::RslResult<i32> {
     let nt_dup_hash = crate::dbj2_hash!(b"NtDuplicateObject");
 
     let status = unsafe {
@@ -30,7 +30,8 @@ pub fn duplicate_object(
             handle_attributes as u64,
             options as u64
         )
-    }.ok_or_else(|| obfstr!("Syscall failed").to_string())?;
+    }
+    .ok_or_else(|| obfstr!("Syscall failed").to_string())?;
 
     Ok(status)
 }
@@ -41,7 +42,7 @@ pub fn query_object(
     object_information: *mut core::ffi::c_void,
     object_information_length: u32,
     return_length: *mut u32,
-) -> Result<i32, String> {
+) -> crate::utils::error::RslResult<i32> {
     let nt_query_obj_hash = crate::dbj2_hash!(b"NtQueryObject");
 
     let status = unsafe {
@@ -54,7 +55,8 @@ pub fn query_object(
             object_information_length as u64,
             return_length as u64
         )
-    }.ok_or_else(|| obfstr!("Syscall failed").to_string())?;
+    }
+    .ok_or_else(|| obfstr!("Syscall failed").to_string())?;
 
     Ok(status)
 }

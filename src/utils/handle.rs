@@ -1,5 +1,5 @@
-use std::ptr::null_mut;
 use crate::ntapi::close_handle;
+use std::ptr::null_mut;
 
 pub struct Handle(*mut std::ffi::c_void);
 

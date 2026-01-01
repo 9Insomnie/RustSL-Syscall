@@ -1,11 +1,11 @@
 #![allow(non_snake_case, non_camel_case_types)]
 
-pub fn http_get(url: &str) -> Result<(u16, Vec<u8>), String> {
-    use crate::utils::{load_library, get_proc_address};
-    use std::ptr::{null, null_mut};
-    use std::ffi::c_void;
+pub fn http_get(url: &str) -> crate::utils::error::RslResult<(u16, Vec<u8>)> {
+    use crate::utils::{get_proc_address, load_library};
+    use obfstr::{obfbytes, obfstr};
     use rsl_macros::obfuscation_noise_macro;
-    use obfstr::{obfstr, obfbytes};
+    use std::ffi::c_void;
+    use std::ptr::{null, null_mut};
 
     // Function definitions
     type WinHttpOpenFn = unsafe extern "system" fn(
@@ -13,14 +13,14 @@ pub fn http_get(url: &str) -> Result<(u16, Vec<u8>), String> {
         dwAccessType: u32,
         pszProxyW: *const u16,
         pszProxyBypassW: *const u16,
-        dwFlags: u32
+        dwFlags: u32,
     ) -> *mut c_void;
 
     type WinHttpConnectFn = unsafe extern "system" fn(
         hSession: *mut c_void,
         pswzServerName: *const u16,
         nServerPort: u16,
-        dwReserved: u32
+        dwReserved: u32,
     ) -> *mut c_void;
 
     type WinHttpOpenRequestFn = unsafe extern "system" fn(
@@ -30,7 +30,7 @@ pub fn http_get(url: &str) -> Result<(u16, Vec<u8>), String> {
         pwszVersion: *const u16,
         pwszReferrer: *const u16,
         ppwszAcceptTypes: *const *const u16,
-        dwFlags: u32
+        dwFlags: u32,
     ) -> *mut c_void;
 
     type WinHttpSendRequestFn = unsafe extern "system" fn(
@@ -40,13 +40,11 @@ pub fn http_get(url: &str) -> Result<(u16, Vec<u8>), String> {
         lpOptional: *const c_void,
         dwOptionalLength: u32,
         dwTotalLength: u32,
-        dwContext: usize
+        dwContext: usize,
     ) -> i32;
 
-    type WinHttpReceiveResponseFn = unsafe extern "system" fn(
-        hRequest: *mut c_void,
-        lpReserved: *mut c_void
-    ) -> i32;
+    type WinHttpReceiveResponseFn =
+        unsafe extern "system" fn(hRequest: *mut c_void, lpReserved: *mut c_void) -> i32;
 
     type WinHttpQueryHeadersFn = unsafe extern "system" fn(
         hRequest: *mut c_void,
@@ -54,24 +52,22 @@ pub fn http_get(url: &str) -> Result<(u16, Vec<u8>), String> {
         pwszName: *const u16,
         lpBuffer: *mut c_void,
         lpdwBufferLength: *mut u32,
-        lpdwIndex: *mut u32
+        lpdwIndex: *mut u32,
     ) -> i32;
 
     type WinHttpQueryDataAvailableFn = unsafe extern "system" fn(
         hRequest: *mut c_void,
-        lpdwNumberOfBytesAvailable: *mut u32
+        lpdwNumberOfBytesAvailable: *mut u32,
     ) -> i32;
 
     type WinHttpReadDataFn = unsafe extern "system" fn(
         hRequest: *mut c_void,
         lpBuffer: *mut c_void,
         dwNumberOfBytesToRead: u32,
-        lpdwNumberOfBytesRead: *mut u32
+        lpdwNumberOfBytesRead: *mut u32,
     ) -> i32;
 
-    type WinHttpCloseHandleFn = unsafe extern "system" fn(
-        hInternet: *mut c_void
-    ) -> i32;
+    type WinHttpCloseHandleFn = unsafe extern "system" fn(hInternet: *mut c_void) -> i32;
 
     // Constants
     const WINHTTP_ACCESS_TYPE_DEFAULT_PROXY: u32 = 0;
@@ -89,9 +85,7 @@ pub fn http_get(url: &str) -> Result<(u16, Vec<u8>), String> {
     };
     let is_ssl = scheme == "https";
 
-    let to_wstring = |s: &str| -> Vec<u16> {
-        s.encode_utf16().chain(std::iter::once(0)).collect()
-    };
+    let to_wstring = |s: &str| -> Vec<u16> { s.encode_utf16().chain(std::iter::once(0)).collect() };
 
     let user_agent = to_wstring("Mozilla/5.0");
     let host_w = to_wstring(host);
@@ -103,15 +97,44 @@ pub fn http_get(url: &str) -> Result<(u16, Vec<u8>), String> {
         let winhttp_dll = load_library(obfbytes!(b"winhttp.dll\0").as_slice())?;
 
         // Resolve functions
-        let win_http_open: WinHttpOpenFn = std::mem::transmute(get_proc_address(winhttp_dll, obfbytes!(b"WinHttpOpen\0").as_slice())?);
-        let win_http_connect: WinHttpConnectFn = std::mem::transmute(get_proc_address(winhttp_dll, obfbytes!(b"WinHttpConnect\0").as_slice())?);
-        let win_http_open_request: WinHttpOpenRequestFn = std::mem::transmute(get_proc_address(winhttp_dll, obfbytes!(b"WinHttpOpenRequest\0").as_slice())?);
-        let win_http_send_request: WinHttpSendRequestFn = std::mem::transmute(get_proc_address(winhttp_dll, obfbytes!(b"WinHttpSendRequest\0").as_slice())?);
-        let win_http_receive_response: WinHttpReceiveResponseFn = std::mem::transmute(get_proc_address(winhttp_dll, obfbytes!(b"WinHttpReceiveResponse\0").as_slice())?);
-        let win_http_query_headers: WinHttpQueryHeadersFn = std::mem::transmute(get_proc_address(winhttp_dll, obfbytes!(b"WinHttpQueryHeaders\0").as_slice())?);
-        let win_http_query_data_available: WinHttpQueryDataAvailableFn = std::mem::transmute(get_proc_address(winhttp_dll, obfbytes!(b"WinHttpQueryDataAvailable\0").as_slice())?);
-        let win_http_read_data: WinHttpReadDataFn = std::mem::transmute(get_proc_address(winhttp_dll, obfbytes!(b"WinHttpReadData\0").as_slice())?);
-        let win_http_close_handle: WinHttpCloseHandleFn = std::mem::transmute(get_proc_address(winhttp_dll, obfbytes!(b"WinHttpCloseHandle\0").as_slice())?);
+        let win_http_open: WinHttpOpenFn = std::mem::transmute(get_proc_address(
+            winhttp_dll,
+            obfbytes!(b"WinHttpOpen\0").as_slice(),
+        )?);
+        let win_http_connect: WinHttpConnectFn = std::mem::transmute(get_proc_address(
+            winhttp_dll,
+            obfbytes!(b"WinHttpConnect\0").as_slice(),
+        )?);
+        let win_http_open_request: WinHttpOpenRequestFn = std::mem::transmute(get_proc_address(
+            winhttp_dll,
+            obfbytes!(b"WinHttpOpenRequest\0").as_slice(),
+        )?);
+        let win_http_send_request: WinHttpSendRequestFn = std::mem::transmute(get_proc_address(
+            winhttp_dll,
+            obfbytes!(b"WinHttpSendRequest\0").as_slice(),
+        )?);
+        let win_http_receive_response: WinHttpReceiveResponseFn =
+            std::mem::transmute(get_proc_address(
+                winhttp_dll,
+                obfbytes!(b"WinHttpReceiveResponse\0").as_slice(),
+            )?);
+        let win_http_query_headers: WinHttpQueryHeadersFn = std::mem::transmute(get_proc_address(
+            winhttp_dll,
+            obfbytes!(b"WinHttpQueryHeaders\0").as_slice(),
+        )?);
+        let win_http_query_data_available: WinHttpQueryDataAvailableFn =
+            std::mem::transmute(get_proc_address(
+                winhttp_dll,
+                obfbytes!(b"WinHttpQueryDataAvailable\0").as_slice(),
+            )?);
+        let win_http_read_data: WinHttpReadDataFn = std::mem::transmute(get_proc_address(
+            winhttp_dll,
+            obfbytes!(b"WinHttpReadData\0").as_slice(),
+        )?);
+        let win_http_close_handle: WinHttpCloseHandleFn = std::mem::transmute(get_proc_address(
+            winhttp_dll,
+            obfbytes!(b"WinHttpCloseHandle\0").as_slice(),
+        )?);
 
         let h_session = win_http_open(
             user_agent.as_ptr(),
@@ -120,20 +143,19 @@ pub fn http_get(url: &str) -> Result<(u16, Vec<u8>), String> {
             null(),
             0,
         );
-        
+
         if h_session.is_null() {
-             return Err("WinHttpOpen failed".to_string());
+            return Err(crate::utils::error::RslError::HttpError(
+                "WinHttpOpen failed".to_string(),
+            ));
         }
 
-        let h_connect = win_http_connect(
-            h_session,
-            host_w.as_ptr(),
-            port,
-            0,
-        );
+        let h_connect = win_http_connect(h_session, host_w.as_ptr(), port, 0);
         if h_connect.is_null() {
             win_http_close_handle(h_session);
-            return Err("WinHttpConnect failed".to_string());
+            return Err(crate::utils::error::RslError::HttpError(
+                "WinHttpConnect failed".to_string(),
+            ));
         }
 
         let flags = if is_ssl { WINHTTP_FLAG_SECURE } else { 0 };
@@ -149,29 +171,27 @@ pub fn http_get(url: &str) -> Result<(u16, Vec<u8>), String> {
         if h_request.is_null() {
             win_http_close_handle(h_connect);
             win_http_close_handle(h_session);
-            return Err("WinHttpOpenRequest failed".to_string());
+            return Err(crate::utils::error::RslError::HttpError(
+                "WinHttpOpenRequest failed".to_string(),
+            ));
         }
 
-        if win_http_send_request(
-            h_request,
-            null(),
-            0,
-            null(),
-            0,
-            0,
-            0,
-        ) == 0 {
+        if win_http_send_request(h_request, null(), 0, null(), 0, 0, 0) == 0 {
             win_http_close_handle(h_request);
             win_http_close_handle(h_connect);
             win_http_close_handle(h_session);
-            return Err("WinHttpSendRequest failed".to_string());
+            return Err(crate::utils::error::RslError::HttpError(
+                "WinHttpSendRequest failed".to_string(),
+            ));
         }
 
         if win_http_receive_response(h_request, null_mut()) == 0 {
             win_http_close_handle(h_request);
             win_http_close_handle(h_connect);
             win_http_close_handle(h_session);
-            return Err("WinHttpReceiveResponse failed".to_string());
+            return Err(crate::utils::error::RslError::HttpError(
+                "WinHttpReceiveResponse failed".to_string(),
+            ));
         }
 
         // Get status code
@@ -184,11 +204,14 @@ pub fn http_get(url: &str) -> Result<(u16, Vec<u8>), String> {
             &mut status_code as *mut _ as *mut c_void,
             &mut size,
             null_mut(),
-        ) == 0 {
+        ) == 0
+        {
             win_http_close_handle(h_request);
             win_http_close_handle(h_connect);
             win_http_close_handle(h_session);
-            return Err("WinHttpQueryHeaders failed".to_string());
+            return Err(crate::utils::error::RslError::HttpError(
+                "WinHttpQueryHeaders failed".to_string(),
+            ));
         }
 
         let mut response_body = Vec::new();
@@ -208,7 +231,8 @@ pub fn http_get(url: &str) -> Result<(u16, Vec<u8>), String> {
                 buffer.as_mut_ptr() as *mut c_void,
                 size,
                 &mut read,
-            ) == 0 {
+            ) == 0
+            {
                 break;
             }
             buffer.truncate(read as usize);

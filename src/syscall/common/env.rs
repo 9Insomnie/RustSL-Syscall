@@ -1,11 +1,11 @@
-use ntapi::{ntldr::LDR_DATA_TABLE_ENTRY, ntpebteb::PEB, ntpsapi::PEB_LDR_DATA};
-use std::arch::asm;
-use windows::Win32::System::Threading::GetCurrentThread;
 use dinvoke_rs::data::{PVOID, TLS_OUT_OF_INDEXES};
 use dinvoke_rs::dinvoke;
 use lazy_static::lazy_static;
+use ntapi::{ntldr::LDR_DATA_TABLE_ENTRY, ntpebteb::PEB, ntpsapi::PEB_LDR_DATA};
+use std::arch::asm;
+use windows::Win32::System::Threading::GetCurrentThread;
 
-static mut TLS_INDEX: u32 = 0; 
+static mut TLS_INDEX: u32 = 0;
 
 #[cfg(target_arch = "x86")]
 pub unsafe fn get_teb() -> *mut ntapi::ntpebteb::TEB {
@@ -27,9 +27,10 @@ pub unsafe fn get_peb() -> *mut PEB {
 
 pub unsafe fn get_loaded_module_by_hash(module_hash: u32) -> Option<*mut u8> {
     let peb = get_peb();
-    
+
     let peb_ldr_data_ptr = (*peb).Ldr as *mut PEB_LDR_DATA;
-    let mut module_list = (*peb_ldr_data_ptr).InLoadOrderModuleList.Flink as *mut LDR_DATA_TABLE_ENTRY;
+    let mut module_list =
+        (*peb_ldr_data_ptr).InLoadOrderModuleList.Flink as *mut LDR_DATA_TABLE_ENTRY;
 
     while !(*module_list).DllBase.is_null() {
         let dll_buffer_ptr = (*module_list).BaseDllName.Buffer;
@@ -49,12 +50,20 @@ pub unsafe fn get_loaded_module_by_hash(module_hash: u32) -> Option<*mut u8> {
 // If it fails to do so, it will return the BaseThreadInitThunk's frame address instead.
 pub fn get_desirable_return_address(current_rsp: usize, keep_start_function_frame: bool) -> usize {
     unsafe {
-        let k32 = get_loaded_module_by_hash(crate::dbj2_hash!(b"kernel32.dll")).unwrap_or(std::ptr::null_mut());
+        let k32 = get_loaded_module_by_hash(crate::dbj2_hash!(b"kernel32.dll"))
+            .unwrap_or(std::ptr::null_mut());
         let mut addr: usize = 0;
         let mut start_address = 1;
         let mut end_address = 0;
-        let base_thread_init_thunk_start = crate::syscall::common::pe::get_export_by_hash(k32, crate::dbj2_hash!(b"BaseThreadInitThunk")).unwrap_or(std::ptr::null_mut());
-        let base_thread_init_thunk_addresses = crate::syscall::common::pe::get_function_size(k32 as usize, base_thread_init_thunk_start as usize);
+        let base_thread_init_thunk_start = crate::syscall::common::pe::get_export_by_hash(
+            k32,
+            crate::dbj2_hash!(b"BaseThreadInitThunk"),
+        )
+        .unwrap_or(std::ptr::null_mut());
+        let base_thread_init_thunk_addresses = crate::syscall::common::pe::get_function_size(
+            k32 as usize,
+            base_thread_init_thunk_start as usize,
+        );
 
         let base_thread_init_thunk_end = base_thread_init_thunk_addresses.1;
         let thread_handle = GetCurrentThread();
@@ -66,7 +75,13 @@ pub fn get_desirable_return_address(current_rsp: usize, keep_start_function_fram
         let ret_len: *mut u32 = std::mem::transmute(&ret_len);
         if keep_start_function_frame {
             // Obtain current thread's start address
-            let ret = dinvoke::nt_query_information_thread(thread_handle, thread_info_class, thread_information, thread_info_len, ret_len);
+            let ret = dinvoke::nt_query_information_thread(
+                thread_handle,
+                thread_info_class,
+                thread_information,
+                thread_info_len,
+                ret_len,
+            );
             if ret == 0 {
                 let thread_information = thread_information as *mut usize;
 
@@ -80,7 +95,10 @@ pub fn get_desirable_return_address(current_rsp: usize, keep_start_function_fram
 
                 if ret {
                     let base_address = *module_handle;
-                    let function_addresses = crate::syscall::common::pe::get_function_size(base_address, function_address as _);
+                    let function_addresses = crate::syscall::common::pe::get_function_size(
+                        base_address,
+                        function_address as _,
+                    );
                     start_address = function_addresses.0;
                     end_address = function_addresses.1;
                 }
@@ -93,8 +111,10 @@ pub fn get_desirable_return_address(current_rsp: usize, keep_start_function_fram
         while !found {
             // Check whether the value stored in this stack's address is located at current thread's start function or
             // BaseThreadInitThunk. Otherwise, iterate to the next word in the stack and repeat the process.
-            if (*stack_iterator > start_address && *stack_iterator < end_address) ||
-                (*stack_iterator > base_thread_init_thunk_start as usize && *stack_iterator < base_thread_init_thunk_end) {
+            if (*stack_iterator > start_address && *stack_iterator < end_address)
+                || (*stack_iterator > base_thread_init_thunk_start as usize
+                    && *stack_iterator < base_thread_init_thunk_end)
+            {
                 addr = stack_iterator as usize;
                 let data = dinvoke::tls_get_value(TLS_INDEX) as *mut usize;
                 *data = addr;

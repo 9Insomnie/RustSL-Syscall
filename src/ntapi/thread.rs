@@ -1,11 +1,15 @@
-use crate::syscall;
-use crate::ntapi::def::{THREAD_ALL_ACCESS, CURRENT_PROCESS};
 use super::types::*;
+use crate::ntapi::def::{CURRENT_PROCESS, THREAD_ALL_ACCESS};
+use crate::syscall;
+use crate::utils::{RslError, RslResult};
 use core::ffi::c_void;
 use obfstr::obfstr;
-use crate::utils::{RslResult, RslError};
 
-pub fn create_remote_thread_ex(process_handle: isize, start: usize, arg: usize) -> RslResult<isize> {
+pub fn create_remote_thread_ex(
+    process_handle: isize,
+    start: usize,
+    arg: usize,
+) -> RslResult<isize> {
     let mut thread_handle: isize = 0;
     let nt_create_hash = crate::dbj2_hash!(b"NtCreateThreadEx");
 
@@ -68,7 +72,7 @@ pub fn test_alert() -> RslResult<()> {
         syscall!(
             nt_delay_hash,
             NtDelayExecutionFn,
-            1u8 as u64,  // Alertable = TRUE
+            1u8 as u64, // Alertable = TRUE
             (&mut interval as *mut i64 as u64)
         )
     };
@@ -99,7 +103,10 @@ pub fn get_context_thread(thread_handle: isize, context: *mut core::ffi::c_void)
     }
 }
 
-pub fn set_context_thread(thread_handle: isize, context: *const core::ffi::c_void) -> RslResult<()> {
+pub fn set_context_thread(
+    thread_handle: isize,
+    context: *const core::ffi::c_void,
+) -> RslResult<()> {
     let nt_set_context_hash = crate::dbj2_hash!(b"NtSetContextThread");
 
     let status = unsafe {

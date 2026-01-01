@@ -34,7 +34,11 @@ pub fn freshycalls_syswhispers(
                 .unwrap_or_else(|| {
                     // Fallback: find any syscall instruction in the module
                     // This is safe for indirect syscalls
-                    unsafe { find_syscall_gadget(module_base).map(|p| p as usize).unwrap_or(0) }
+                    unsafe {
+                        find_syscall_gadget(module_base)
+                            .map(|p| p as usize)
+                            .unwrap_or(0)
+                    }
                 });
 
             return Some(SyscallData {
@@ -47,10 +51,10 @@ pub fn freshycalls_syswhispers(
     }
 
     #[cfg(feature = "debug")]
-    crate::utils::print_error("Error", &format!(
-        "syscall: no match found for module_hash={:#x}",
-        module_hash
-    ));
+    crate::utils::print_error(
+        "Error",
+        &format!("syscall: no match found for module_hash={:#x}", module_hash),
+    );
 
     None
 }

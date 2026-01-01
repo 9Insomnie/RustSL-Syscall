@@ -1,13 +1,13 @@
 #![allow(non_snake_case, non_camel_case_types)]
 
-use std::ffi::c_void;
 use crate::utils::dbj2_hash;
+use std::ffi::c_void;
 
 /// Lightweight wrappers that reuse `utils::get` implementations to avoid duplication.
-pub unsafe fn load_library(dll_name: &[u8]) -> Result<isize, String> {
-    use windows_sys::Win32::System::LibraryLoader::LoadLibraryA;
-    use rsl_macros::obfuscation_noise_macro;
+pub unsafe fn load_library(dll_name: &[u8]) -> crate::utils::error::RslResult<isize> {
     use obfstr::obfstr;
+    use rsl_macros::obfuscation_noise_macro;
+    use windows_sys::Win32::System::LibraryLoader::LoadLibraryA;
 
     let name_str = String::from_utf8_lossy(dll_name);
     let name_trimmed = name_str.trim_matches(char::from(0));
@@ -20,20 +20,29 @@ pub unsafe fn load_library(dll_name: &[u8]) -> Result<isize, String> {
     } else {
         let dll = LoadLibraryA(dll_name.as_ptr() as *const u8);
         if dll == 0 {
-            Err(obfstr!("LoadLibraryA failed").to_string())
+            Err(crate::utils::error::RslError::Other(
+                obfstr!("LoadLibraryA failed").to_string(),
+            ))
         } else {
             obfuscation_noise_macro!();
             #[cfg(feature = "debug")]
-            crate::utils::print_message(&format!("{} {}", obfstr!("Module loaded by LoadLibraryA:"), name_trimmed));
+            crate::utils::print_message(&format!(
+                "{} {}",
+                obfstr!("Module loaded by LoadLibraryA:"),
+                name_trimmed
+            ));
             Ok(dll)
         }
     }
 }
 
-pub unsafe fn get_proc_address(dll: isize, name: &[u8]) -> Result<*const (), String> {
-    use windows_sys::Win32::System::LibraryLoader::GetProcAddress;
+pub unsafe fn get_proc_address(
+    dll: isize,
+    name: &[u8],
+) -> crate::utils::error::RslResult<*const ()> {
     use obfstr::obfstr;
     use rsl_macros::obfuscation_noise_macro;
+    use windows_sys::Win32::System::LibraryLoader::GetProcAddress;
 
     let name_str = String::from_utf8_lossy(name);
     let name_trimmed = name_str.trim_matches(char::from(0));
@@ -49,7 +58,9 @@ pub unsafe fn get_proc_address(dll: isize, name: &[u8]) -> Result<*const (), Str
             obfuscation_noise_macro!();
             Ok(f as *const ())
         } else {
-            Err(obfstr!("GetProcAddress failed").to_string())
+            Err(crate::utils::error::RslError::Other(
+                obfstr!("GetProcAddress failed").to_string(),
+            ))
         }
     }
 }

@@ -1,9 +1,14 @@
-use crate::syscall;
 use super::types::*;
-use obfstr::obfstr;
+use crate::syscall;
 use core::ffi::c_void;
+use obfstr::obfstr;
 
-pub fn query_system_information(info_class: u32, buffer: *mut u8, size: u32, return_len: *mut u32) -> Result<i32, String> {
+pub fn query_system_information(
+    info_class: u32,
+    buffer: *mut u8,
+    size: u32,
+    return_len: *mut u32,
+) -> crate::utils::error::RslResult<i32> {
     let nt_query_sys_hash = crate::dbj2_hash!(b"NtQuerySystemInformation");
 
     let status = unsafe {
@@ -15,12 +20,13 @@ pub fn query_system_information(info_class: u32, buffer: *mut u8, size: u32, ret
             size as u64,
             return_len as u64
         )
-    }.ok_or_else(|| obfstr!("Syscall failed").to_string())?;
+    }
+    .ok_or_else(|| obfstr!("Syscall failed").to_string())?;
 
     Ok(status)
 }
 
-pub fn delay_execution_seconds(seconds: i64) -> Result<(), String> {
+pub fn delay_execution_seconds(seconds: i64) -> crate::utils::error::RslResult<()> {
     let nt_delay_hash = crate::dbj2_hash!(b"NtDelayExecution");
     let mut interval: i64 = -10_000_000 * seconds; // 100-ns units
 
@@ -35,7 +41,10 @@ pub fn delay_execution_seconds(seconds: i64) -> Result<(), String> {
     .ok_or_else(|| obfstr!("Syscall failed").to_string())?;
 
     if dstatus < 0 {
-        return Err(format!("NtDelayExecution failed: {:#x}", dstatus));
+        return Err(crate::utils::error::RslError::Other(format!(
+            "NtDelayExecution failed: {:#x}",
+            dstatus
+        )));
     }
 
     Ok(())

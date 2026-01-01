@@ -40,9 +40,5 @@ pub fn print_message(msg: &str) {
         format!("[{}:{}]", file, loc.line()).cyan()
     );
 
-    println!(
-        "  {} {}",
-        "↳".bright_magenta(),
-        msg.green().bold()
-    );
+    println!("  {} {}", "↳".bright_magenta(), msg.green().bold());
 }

@@ -4,12 +4,9 @@ use crate::syscall::common::*;
 use stub::create_indirect_stub;
 
 /// KFD (Konflict) style indirect syscall implementation.
-/// It finds the SSN and a syscall; ret gadget in ntdll, 
+/// It finds the SSN and a syscall; ret gadget in ntdll,
 /// then creates a small executable stub to perform the indirect call.
-pub unsafe fn get_kfd_syscall(
-    module_base: *mut u8,
-    function_hash: u32,
-) -> Option<*mut u8> {
+pub unsafe fn get_kfd_syscall(module_base: *mut u8, function_hash: u32) -> Option<*mut u8> {
     // 1. Find the function address in ntdll
     let p_address = get_export_by_hash(module_base, function_hash)?;
 

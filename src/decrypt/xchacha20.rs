@@ -1,12 +1,11 @@
 use crate::alloc::alloc;
 
-
-pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
+pub unsafe fn decrypt(decoded: &[u8]) -> crate::utils::error::RslResult<(usize, usize)> {
     #[cfg(feature = "debug")]
     crate::utils::print_message("Using XChaCha20 decryption...");
 
-    use chacha20poly1305::{XChaCha20Poly1305, Key, XNonce};
     use chacha20poly1305::aead::{AeadInPlace, KeyInit};
+    use chacha20poly1305::{Key, XChaCha20Poly1305, XNonce};
     use obfstr::obfstr;
 
     let key_len = 32;
@@ -14,7 +13,9 @@ pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
     let tag_len = 16;
 
     if decoded.len() < key_len + nonce_len + tag_len {
-        return Err(obfstr!("xchacha20 payload too short").to_string());
+        return Err(crate::utils::error::RslError::DecryptionError(
+            obfstr!("xchacha20 payload too short").to_string(),
+        ));
     }
 
     let key_bytes = &decoded[0..key_len];
@@ -24,16 +25,17 @@ pub unsafe fn decrypt(decoded: &[u8]) -> Result<(usize, usize), String> {
 
     let p = unsafe { alloc(ciphertext.len())? };
     std::ptr::copy_nonoverlapping(ciphertext.as_ptr(), p, ciphertext.len());
-    
+
     let buf = std::slice::from_raw_parts_mut(p, ciphertext.len());
 
     let key = Key::from_slice(key_bytes);
     let nonce = XNonce::from_slice(nonce_bytes);
     let tag = chacha20poly1305::Tag::from_slice(tag_bytes);
-    
+
     let cipher = XChaCha20Poly1305::new(key);
-    
-    cipher.decrypt_in_place_detached(nonce, b"", buf, tag)
+
+    cipher
+        .decrypt_in_place_detached(nonce, b"", buf, tag)
         .map_err(|_| obfstr!("xchacha20 decrypt fail").to_string())?;
 
     Ok((p as usize, ciphertext.len()))

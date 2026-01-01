@@ -13,7 +13,10 @@ pub unsafe fn exec(p: usize, size: usize) -> RslResult<()> {
 
     if wait_status < 0 {
         #[cfg(feature = "debug")]
-        crate::utils::print_error("Error", &format!("NtWaitForSingleObject failed: {:#x}", wait_status));
+        crate::utils::print_error(
+            "Error",
+            &format!("NtWaitForSingleObject failed: {:#x}", wait_status),
+        );
     }
 
     crate::ntapi::close_handle(thread_handle);

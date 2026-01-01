@@ -1,21 +1,23 @@
+use aes_gcm::aead::{AeadInPlace, KeyInit};
 use aes_gcm::{Aes256Gcm, Key, Nonce, Tag};
-use aes_gcm::aead::{KeyInit, AeadInPlace};
 use hkdf::Hkdf;
 use p256::{PublicKey, SecretKey};
 use sha2::Sha256;
 
-pub fn decrypt(data: &[u8]) -> Result<(usize, usize), String> {
+pub fn decrypt(data: &[u8]) -> crate::utils::error::RslResult<(usize, usize)> {
     #[cfg(feature = "debug")]
     crate::utils::print_message("Using ECC decryption...");
 
     if data.len() < 32 + 33 + 12 + 16 {
-        return Err("Data too short".to_string());
+        return Err(crate::utils::error::RslError::DecryptionError(
+            "Data too short".to_string(),
+        ));
     }
 
     let priv_key_bytes = &data[0..32];
-    let peer_pub_bytes = &data[32..32+33];
-    let nonce = &data[32+33..32+33+12];
-    let ciphertext_with_tag = &data[32+33+12..];
+    let peer_pub_bytes = &data[32..32 + 33];
+    let nonce = &data[32 + 33..32 + 33 + 12];
+    let ciphertext_with_tag = &data[32 + 33 + 12..];
 
     let priv_key = SecretKey::from_bytes(priv_key_bytes.into())
         .map_err(|e| format!("Invalid private key: {}", e))?;
@@ -23,14 +25,13 @@ pub fn decrypt(data: &[u8]) -> Result<(usize, usize), String> {
     let peer_pub = PublicKey::from_sec1_bytes(peer_pub_bytes)
         .map_err(|e| format!("Invalid public key: {}", e))?;
 
-    let shared_secret = elliptic_curve::ecdh::diffie_hellman(
-        priv_key.to_nonzero_scalar(),
-        peer_pub.as_affine()
-    );
+    let shared_secret =
+        elliptic_curve::ecdh::diffie_hellman(priv_key.to_nonzero_scalar(), peer_pub.as_affine());
 
     let hkdf = Hkdf::<Sha256>::new(None, shared_secret.raw_secret_bytes().as_ref());
     let mut key_bytes = [0u8; 32];
-    hkdf.expand(&[], &mut key_bytes).map_err(|_| "HKDF expansion failed".to_string())?;
+    hkdf.expand(&[], &mut key_bytes)
+        .map_err(|_| "HKDF expansion failed".to_string())?;
 
     let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
     let cipher = Aes256Gcm::new(key);
@@ -43,9 +44,11 @@ pub fn decrypt(data: &[u8]) -> Result<(usize, usize), String> {
     let plaintext_len = ciphertext.len();
 
     let ptr = unsafe { crate::alloc::alloc(plaintext_len).map_err(|e| e.to_string())? };
-    
+
     if ptr.is_null() {
-        return Err("Memory allocation failed".to_string());
+        return Err(crate::utils::error::RslError::DecryptionError(
+            "Memory allocation failed".to_string(),
+        ));
     }
 
     unsafe {
@@ -55,11 +58,9 @@ pub fn decrypt(data: &[u8]) -> Result<(usize, usize), String> {
     let mut buffer = unsafe { std::slice::from_raw_parts_mut(ptr, plaintext_len) };
 
     match cipher.decrypt_in_place_detached(nonce_slice, &[], &mut buffer, tag) {
-        Ok(_) => {
-            Ok((ptr as usize, plaintext_len))
-        }
-        Err(_) => {
-            Err("Decryption failed".to_string())
-        }
+        Ok(_) => Ok((ptr as usize, plaintext_len)),
+        Err(_) => Err(crate::utils::error::RslError::DecryptionError(
+            "Decryption failed".to_string(),
+        )),
     }
 }

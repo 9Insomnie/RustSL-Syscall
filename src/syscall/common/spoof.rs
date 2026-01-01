@@ -1,18 +1,24 @@
 #![allow(dead_code, unused_imports)]
 
 use crate::syscall::common::*;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::mem::size_of;
-use std::ffi::c_void;
-use windows::Win32::{Foundation::HANDLE, System::{Memory::MEMORY_BASIC_INFORMATION, SystemInformation::SYSTEM_INFO}};
-use windows::Win32::System::Threading::GetCurrentThread;
 use bitreader::BitReader;
-use nanorand::{WyRand, Rng};
-use lazy_static::lazy_static;
+use dinvoke_rs::data::{
+    RuntimeFunction, ADD_RSP, JMP_RBX, PVOID, TLS_OUT_OF_INDEXES, UNW_FLAG_CHAININFO,
+    UNW_FLAG_EHANDLER,
+};
 use dinvoke_rs::data::{PAGE_EXECUTE_READ, PAGE_EXECUTE_READWRITE, PAGE_READONLY, PAGE_READWRITE};
-use dinvoke_rs::data::{RuntimeFunction, ADD_RSP, JMP_RBX, PVOID, TLS_OUT_OF_INDEXES, UNW_FLAG_CHAININFO, UNW_FLAG_EHANDLER};
+use lazy_static::lazy_static;
+use nanorand::{Rng, WyRand};
 use obfstr::obfstr;
+use std::collections::HashMap;
+use std::ffi::c_void;
+use std::mem::size_of;
+use std::sync::{Arc, Mutex};
+use windows::Win32::System::Threading::GetCurrentThread;
+use windows::Win32::{
+    Foundation::HANDLE,
+    System::{Memory::MEMORY_BASIC_INFORMATION, SystemInformation::SYSTEM_INFO},
+};
 
 extern "C" {
     pub fn spoof_call(structure: PVOID) -> PVOID;
@@ -22,10 +28,10 @@ extern "C" {
 
 #[repr(C)]
 pub struct Configuration {
-    pub god_gadget: usize, // Unused atm
+    pub god_gadget: usize,         // Unused atm
     pub rtl_unwind_address: usize, // Unused atm
-    pub rtl_unwind_target: usize, // Unused atm
-    pub stub: usize, // Unused atm
+    pub rtl_unwind_target: usize,  // Unused atm
+    pub stub: usize,               // Unused atm
     pub first_frame_function_pointer: PVOID,
     pub second_frame_function_pointer: PVOID,
     pub jmp_rbx_gadget: PVOID,
@@ -60,24 +66,37 @@ lazy_static! {
 }
 
 /// Spoof and call with SyscallData for indirect syscall.
-pub fn syscall_with_spoof(data: crate::syscall::common::SyscallData, _func: PVOID, args: Vec<PVOID>) -> PVOID {
+pub fn syscall_with_spoof(
+    data: crate::syscall::common::SyscallData,
+    _func: PVOID,
+    args: Vec<PVOID>,
+) -> PVOID {
     unsafe {
         let mut config: Configuration = std::mem::zeroed();
         let mut black_list: Vec<(u32, u32)> = vec![];
-        let kernelbase = env::get_loaded_module_by_hash(crate::dbj2_hash!(b"kernelbase.dll")).unwrap_or(std::ptr::null_mut()) as usize;
+        let kernelbase = env::get_loaded_module_by_hash(crate::dbj2_hash!(b"kernelbase.dll"))
+            .unwrap_or(std::ptr::null_mut()) as usize;
 
         let mut first_frame_size = 0i32;
-        let first_frame_address = gadget::find_setfpreg(kernelbase, &mut first_frame_size, &mut black_list);
+        let first_frame_address =
+            gadget::find_setfpreg(kernelbase, &mut first_frame_size, &mut black_list);
 
         let mut push_offset = 0i32;
         let mut second_frame_size = 0i32;
-        let second_frame_addr = gadget::find_pushrbp(kernelbase, &mut second_frame_size, &mut push_offset, &mut black_list);
+        let second_frame_addr = gadget::find_pushrbp(
+            kernelbase,
+            &mut second_frame_size,
+            &mut push_offset,
+            &mut black_list,
+        );
 
         let mut first_gadget_size = 0i32;
-        let first_gadget_addr = gadget::find_gadget(kernelbase, &mut first_gadget_size, 0, &mut black_list);
+        let first_gadget_addr =
+            gadget::find_gadget(kernelbase, &mut first_gadget_size, 0, &mut black_list);
 
         let mut second_gadget_size = 0i32;
-        let second_gadget_addr = gadget::find_gadget(kernelbase, &mut second_gadget_size, 1, &mut black_list);
+        let second_gadget_addr =
+            gadget::find_gadget(kernelbase, &mut second_gadget_size, 1, &mut black_list);
         config.first_frame_function_pointer = first_frame_address as *mut _;
         config.first_frame_size = first_frame_size as usize;
         config.second_frame_function_pointer = second_frame_addr as *mut _;
