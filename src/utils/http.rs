@@ -77,22 +77,38 @@ pub fn http_get(url: &str) -> crate::utils::error::RslResult<(u16, Vec<u8>)> {
     const WINHTTP_QUERY_STATUS_CODE: u32 = 19;
     const WINHTTP_QUERY_FLAG_NUMBER: u32 = 0x20000000;
 
-    let (scheme, rest) = url.split_once("://").ok_or("Invalid URL format")?;
-    let (host_port, path) = rest.split_once('/').unwrap_or((rest, ""));
-    let path = format!("/{}", path);
-    let (host, port) = if let Some((h, p)) = host_port.split_once(':') {
-        (h, p.parse::<u16>().map_err(|_| "Invalid port")?)
-    } else {
-        (host_port, if scheme == "https" { 443 } else { 80 })
+    let (scheme, rest) = url
+        .split_once(obfstr!("://"))
+        .ok_or_else(|| crate::utils::error::RslError::from(obfstr!("Invalid URL format")))?;
+    let (host_port, path) = match rest.split_once(obfstr!("/")) {
+        Some(res) => res,
+        None => (rest, ""),
     };
-    let is_ssl = scheme == "https";
+    let path_str = format!("{}{}", obfstr!("/"), path);
+    let (host, port) = if let Some((h, p)) = host_port.split_once(obfstr!(":")) {
+        (
+            h,
+            p.parse::<u16>()
+                .map_err(|_| crate::utils::error::RslError::from(obfstr!("Invalid port")))?,
+        )
+    } else {
+        (
+            host_port,
+            if scheme == obfstr!("https") {
+                443
+            } else {
+                80
+            },
+        )
+    };
+    let is_ssl = scheme == obfstr!("https");
 
     let to_wstring = |s: &str| -> Vec<u16> { s.encode_utf16().chain(std::iter::once(0)).collect() };
 
-    let user_agent = to_wstring("Mozilla/5.0");
+    let user_agent = to_wstring(obfstr!("Mozilla/5.0"));
     let host_w = to_wstring(host);
-    let path_w = to_wstring(&path);
-    let method_w = to_wstring("GET");
+    let path_w = to_wstring(&path_str);
+    let method_w = to_wstring(obfstr!("GET"));
 
     unsafe {
         // Load winhttp.dll using NTAPI (checks hash first internally)
@@ -134,7 +150,7 @@ pub fn http_get(url: &str) -> crate::utils::error::RslResult<(u16, Vec<u8>)> {
 
         if h_session.is_null() {
             return Err(crate::utils::error::RslError::HttpError(
-                "WinHttpOpen failed".to_string(),
+                obfstr!("WinHttpOpen failed").to_string(),
             ));
         }
 
@@ -142,7 +158,7 @@ pub fn http_get(url: &str) -> crate::utils::error::RslResult<(u16, Vec<u8>)> {
         if h_connect.is_null() {
             win_http_close_handle(h_session);
             return Err(crate::utils::error::RslError::HttpError(
-                "WinHttpConnect failed".to_string(),
+                obfstr!("WinHttpConnect failed").to_string(),
             ));
         }
 
@@ -160,7 +176,7 @@ pub fn http_get(url: &str) -> crate::utils::error::RslResult<(u16, Vec<u8>)> {
             win_http_close_handle(h_connect);
             win_http_close_handle(h_session);
             return Err(crate::utils::error::RslError::HttpError(
-                "WinHttpOpenRequest failed".to_string(),
+                obfstr!("WinHttpOpenRequest failed").to_string(),
             ));
         }
 
@@ -169,7 +185,7 @@ pub fn http_get(url: &str) -> crate::utils::error::RslResult<(u16, Vec<u8>)> {
             win_http_close_handle(h_connect);
             win_http_close_handle(h_session);
             return Err(crate::utils::error::RslError::HttpError(
-                "WinHttpSendRequest failed".to_string(),
+                obfstr!("WinHttpSendRequest failed").to_string(),
             ));
         }
 
@@ -178,7 +194,7 @@ pub fn http_get(url: &str) -> crate::utils::error::RslResult<(u16, Vec<u8>)> {
             win_http_close_handle(h_connect);
             win_http_close_handle(h_session);
             return Err(crate::utils::error::RslError::HttpError(
-                "WinHttpReceiveResponse failed".to_string(),
+                obfstr!("WinHttpReceiveResponse failed").to_string(),
             ));
         }
 
@@ -198,7 +214,7 @@ pub fn http_get(url: &str) -> crate::utils::error::RslResult<(u16, Vec<u8>)> {
             win_http_close_handle(h_connect);
             win_http_close_handle(h_session);
             return Err(crate::utils::error::RslError::HttpError(
-                "WinHttpQueryHeaders failed".to_string(),
+                obfstr!("WinHttpQueryHeaders failed").to_string(),
             ));
         }
 
