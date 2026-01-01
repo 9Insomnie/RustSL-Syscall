@@ -6,14 +6,16 @@ use core::ffi::c_void;
 pub fn query_system_information(info_class: u32, buffer: *mut u8, size: u32, return_len: *mut u32) -> Result<i32, String> {
     let nt_query_sys_hash = crate::dbj2_hash!(b"NtQuerySystemInformation");
 
-    let status = syscall!(
-        nt_query_sys_hash,
-        NtQuerySystemInformationFn,
-        info_class as u64,
-        (buffer as *mut c_void) as u64,
-        size as u64,
-        return_len as u64
-    ).ok_or_else(|| obfstr!("Syscall failed").to_string())?;
+    let status = unsafe {
+        syscall!(
+            nt_query_sys_hash,
+            NtQuerySystemInformationFn,
+            info_class as u64,
+            (buffer as *mut c_void) as u64,
+            size as u64,
+            return_len as u64
+        )
+    }.ok_or_else(|| obfstr!("Syscall failed").to_string())?;
 
     Ok(status)
 }
@@ -22,12 +24,14 @@ pub fn delay_execution_seconds(seconds: i64) -> Result<(), String> {
     let nt_delay_hash = crate::dbj2_hash!(b"NtDelayExecution");
     let mut interval: i64 = -10_000_000 * seconds; // 100-ns units
 
-    let dstatus = syscall!(
-        nt_delay_hash,
-        NtDelayExecutionFn,
-        1u8 as u64,
-        (&mut interval as *mut i64 as u64)
-    )
+    let dstatus = unsafe {
+        syscall!(
+            nt_delay_hash,
+            NtDelayExecutionFn,
+            1u8 as u64,
+            (&mut interval as *mut i64 as u64)
+        )
+    }
     .ok_or_else(|| obfstr!("Syscall failed").to_string())?;
 
     if dstatus < 0 {

@@ -1,15 +1,11 @@
+use crate::utils::RslResult;
 
-pub unsafe fn alloc(size: usize) -> Result<*mut u8, String> {
+pub unsafe fn alloc(size: usize) -> RslResult<*mut u8> {
     #[cfg(feature = "debug")]
     crate::utils::print_message(&format!("Allocating {} bytes via NtAllocateVirtualMemory...", size));
 
     use crate::ntapi::alloc_virtual_memory;
     use crate::ntapi::PAGE_READWRITE;
 
-    let result = alloc_virtual_memory(size, PAGE_READWRITE);
-
-    match result {
-        Ok(ptr) => Ok(ptr),
-        Err(e) => Err(e),
-    }
+    alloc_virtual_memory(size, PAGE_READWRITE)
 }

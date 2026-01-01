@@ -44,3 +44,8 @@ pub fn sys_encode_fn_pointer(ptr: usize) -> usize {
 }
 
 pub mod veh_hwbp;
+pub mod handle;
+pub use handle::Handle;
+
+pub mod error;
+pub use error::{RslError, RslResult};

@@ -4,7 +4,7 @@ use obfstr::obfstr;
 
 pub fn close_handle(handle: isize) {
     let nt_close_hash = crate::dbj2_hash!(b"NtClose");
-    let _ = syscall!(nt_close_hash, NtCloseFn, handle as u64);
+    let _ = unsafe { syscall!(nt_close_hash, NtCloseFn, handle as u64) };
 }
 
 pub fn duplicate_object(
@@ -18,17 +18,19 @@ pub fn duplicate_object(
 ) -> Result<i32, String> {
     let nt_dup_hash = crate::dbj2_hash!(b"NtDuplicateObject");
 
-    let status = syscall!(
-        nt_dup_hash,
-        NtDuplicateObjectFn,
-        source_process_handle as u64,
-        source_handle as u64,
-        target_process_handle as u64,
-        target_handle as u64,
-        desired_access as u64,
-        handle_attributes as u64,
-        options as u64
-    ).ok_or_else(|| obfstr!("Syscall failed").to_string())?;
+    let status = unsafe {
+        syscall!(
+            nt_dup_hash,
+            NtDuplicateObjectFn,
+            source_process_handle as u64,
+            source_handle as u64,
+            target_process_handle as u64,
+            target_handle as u64,
+            desired_access as u64,
+            handle_attributes as u64,
+            options as u64
+        )
+    }.ok_or_else(|| obfstr!("Syscall failed").to_string())?;
 
     Ok(status)
 }
@@ -42,15 +44,17 @@ pub fn query_object(
 ) -> Result<i32, String> {
     let nt_query_obj_hash = crate::dbj2_hash!(b"NtQueryObject");
 
-    let status = syscall!(
-        nt_query_obj_hash,
-        NtQueryObjectFn,
-        handle as u64,
-        object_information_class as u64,
-        object_information as u64,
-        object_information_length as u64,
-        return_length as u64
-    ).ok_or_else(|| obfstr!("Syscall failed").to_string())?;
+    let status = unsafe {
+        syscall!(
+            nt_query_obj_hash,
+            NtQueryObjectFn,
+            handle as u64,
+            object_information_class as u64,
+            object_information as u64,
+            object_information_length as u64,
+            return_length as u64
+        )
+    }.ok_or_else(|| obfstr!("Syscall failed").to_string())?;
 
     Ok(status)
 }

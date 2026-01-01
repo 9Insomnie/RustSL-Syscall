@@ -1,4 +1,6 @@
-pub unsafe fn exec(p: usize, size: usize) -> Result<(), String> {
+use crate::utils::RslResult;
+
+pub unsafe fn exec(p: usize, size: usize) -> RslResult<()> {
     #[cfg(feature = "debug")]
     crate::utils::print_message("Executing via Create Thread Syscall...");
 

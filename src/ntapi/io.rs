@@ -11,15 +11,17 @@ pub fn set_io_completion(
 ) -> Result<i32, String> {
     let nt_set_io_hash = crate::dbj2_hash!(b"NtSetIoCompletion");
 
-    let status = syscall!(
-        nt_set_io_hash,
-        NtSetIoCompletionFn,
-        io_completion_handle as u64,
-        key_context as u64,
-        apc_context as u64,
-        io_status as u64,
-        io_status_information as u64
-    ).ok_or_else(|| obfstr!("Syscall failed").to_string())?;
+    let status = unsafe {
+        syscall!(
+            nt_set_io_hash,
+            NtSetIoCompletionFn,
+            io_completion_handle as u64,
+            key_context as u64,
+            apc_context as u64,
+            io_status as u64,
+            io_status_information as u64
+        )
+    }.ok_or_else(|| obfstr!("Syscall failed").to_string())?;
 
     Ok(status)
 }

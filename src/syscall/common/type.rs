@@ -50,3 +50,8 @@ pub struct SyscallData {
     pub ssn: u16,
     pub syscall_inst: usize,
 }
+#[derive(Clone, Copy, Debug)]
+pub enum ResolvedSyscall {
+    Indirect(SyscallData),
+    Direct(usize),
+}
