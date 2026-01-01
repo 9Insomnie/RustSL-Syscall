@@ -34,7 +34,7 @@ pub fn get_process_id_by_name(name_hash: u32) -> Result<u32, String> {
         if name_len > 0 && !name_buf_ptr.is_null() {
             let name_slice = unsafe { std::slice::from_raw_parts(name_buf_ptr, (name_len / 2) as usize) };
             if let Ok(name_str) = String::from_utf16(name_slice) {
-                if crate::utils::dbj2_hash(name_str.to_lowercase().as_bytes()) == name_hash {
+                if crate::utils::dbj2_hash(name_str.as_bytes()) == name_hash {
                     // Found it
                     // UniqueProcessId is at offset 0x50 on x64
                     let pid = unsafe { *(curr_ptr.add(0x50) as *const usize) } as u32;

