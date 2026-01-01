@@ -13,7 +13,6 @@ tempfile = "3.10.1"
 base64 = "0.21.5"
 base32 = "0.5.1"
 windows = { version = "0.51.1", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_System_LibraryLoader", "Win32_Networking_WinHttp"] }
-winreg = "0.52.0"
 uuid = { version = "1.0", features = ["v4"] }
 memmap2 = "0.6.1"
 dirs = "4.0"
@@ -23,7 +22,6 @@ aes = "0.8"
 chacha20 = "0.8"
 generic-array = "0.14"
 serde = { version = "1.0", features = ["derive"] }
-wmi = "0.9"
 aes-gcm = "0.10"
 rc4 = "0.1"
 typenum = "1.16"
@@ -44,7 +42,6 @@ rsl-macros = { path = "rsl-macros" }
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "2.0", features = ["full"] }
-sysinfo = "0.29"
 ntapi = "0.4.0"
 nanorand = "0.7"
 bitreader = "0.3"

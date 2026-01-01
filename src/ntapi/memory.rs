@@ -1,16 +1,14 @@
 use crate::syscall;
-use crate::ntapi::def::{MEM_COMMIT, PAGE_EXECUTE_READWRITE, SECTION_ALL_ACCESS, SEC_COMMIT};
+use crate::ntapi::def::{MEM_COMMIT, MEM_RESERVE, MEM_RELEASE, PAGE_EXECUTE_READWRITE, SECTION_ALL_ACCESS, SEC_COMMIT};
 use super::types::*;
+use core::ffi::c_void;
+use obfstr::obfstr;
 
 pub fn alloc_virtual_memory(size: usize, protection: u32) -> Result<*mut u8, String> {
 	alloc_virtual_memory_at(-1, 0, size, protection).map(|addr| addr as *mut u8)
 }
 
 pub fn alloc_virtual_memory_at(process_handle: isize, base_addr: usize, size: usize, protection: u32) -> Result<usize, String> {
-	use core::ffi::c_void;
-	use obfstr::obfstr;
-	use crate::ntapi::def::MEM_RESERVE;
-
 	let mut base_ptr = base_addr as *mut c_void;
 	let mut region = size;
 	let nt_alloc_hash = crate::dbj2_hash!(b"NtAllocateVirtualMemory");
@@ -34,11 +32,6 @@ pub fn alloc_virtual_memory_at(process_handle: isize, base_addr: usize, size: us
 }
 
 pub fn create_section(size: usize, protection: u32) -> Result<isize, String> {
-	use core::ffi::c_void;
-	use obfstr::obfstr;
-
-	// constants moved to def.rs
-
 	let mut section_handle: isize = 0;
 	let mut max_size: i64 = size as i64;
 	let nt_create_hash = crate::dbj2_hash!(b"NtCreateSection");
@@ -64,9 +57,6 @@ pub fn create_section(size: usize, protection: u32) -> Result<isize, String> {
 }
 
 pub fn protect_virtual_memory(process_handle: isize, base_addr: usize, size: usize, new_prot: u32) -> Result<u32, String> {
-    use core::ffi::c_void;
-    use obfstr::obfstr;
-
     let nt_protect_hash = crate::dbj2_hash!(b"NtProtectVirtualMemory");
     let mut old_prot = 0;
     let mut base_ptr = base_addr as *mut c_void;
@@ -90,11 +80,6 @@ pub fn protect_virtual_memory(process_handle: isize, base_addr: usize, size: usi
 }
 
 pub fn map_view_of_section(section_handle: isize, size: usize, protection: u32) -> Result<*mut u8, String> {
-	use core::ffi::c_void;
-	use obfstr::obfstr;
-
-	// PAGE_EXECUTE_READWRITE from def.rs
-
 	let mut base_ptr: *mut c_void = core::ptr::null_mut();
 	let mut vs = size;
 	let nt_map_hash = crate::dbj2_hash!(b"NtMapViewOfSection");
@@ -123,9 +108,6 @@ pub fn map_view_of_section(section_handle: isize, size: usize, protection: u32) 
 }
 
 pub fn unmap_view_of_section(process_handle: isize, base_addr: usize) -> Result<(), String> {
-	use core::ffi::c_void;
-	use obfstr::obfstr;
-
 	let nt_unmap_hash = crate::dbj2_hash!(b"NtUnmapViewOfSection");
 
 	let status = syscall!(
@@ -143,10 +125,6 @@ pub fn unmap_view_of_section(process_handle: isize, base_addr: usize) -> Result<
 }
 
 pub fn free_virtual_memory(process_handle: isize, base_addr: *mut u8, size: usize) -> Result<(), String> {
-	use core::ffi::c_void;
-	use obfstr::obfstr;
-	use crate::ntapi::def::MEM_RELEASE;
-
 	let mut base = base_addr as *mut c_void;
 	let mut region_size = size;
 	let nt_free_hash = crate::dbj2_hash!(b"NtFreeVirtualMemory");
@@ -167,3 +145,44 @@ pub fn free_virtual_memory(process_handle: isize, base_addr: *mut u8, size: usiz
 	Ok(())
 }
 
+pub fn read_virtual_memory(process_handle: isize, base_addr: usize, buffer: &mut [u8]) -> Result<usize, String> {
+    let mut bytes_read: usize = 0;
+    let nt_read_hash = crate::dbj2_hash!(b"NtReadVirtualMemory");
+
+    let status = syscall!(
+        nt_read_hash,
+        NtReadVirtualMemoryFn,
+        process_handle as u64,
+        (base_addr as *mut c_void) as u64,
+        (buffer.as_mut_ptr() as *mut c_void) as u64,
+        buffer.len() as u64,
+        (&mut bytes_read as *mut usize as u64)
+    ).ok_or_else(|| obfstr!("Syscall failed").to_string())?;
+
+    if status < 0 {
+        return Err(format!("NtReadVirtualMemory failed: {:#x}", status));
+    }
+
+    Ok(bytes_read)
+}
+
+pub fn write_virtual_memory(process_handle: isize, base_addr: usize, buffer: &[u8]) -> Result<usize, String> {
+    let mut bytes_written: usize = 0;
+    let nt_write_hash = crate::dbj2_hash!(b"NtWriteVirtualMemory");
+
+    let status = syscall!(
+        nt_write_hash,
+        NtWriteVirtualMemoryFn,
+        process_handle as u64,
+        (base_addr as *mut c_void) as u64,
+        (buffer.as_ptr() as *mut c_void) as u64,
+        buffer.len() as u64,
+        (&mut bytes_written as *mut usize as u64)
+    ).ok_or_else(|| obfstr!("Syscall failed").to_string())?;
+
+    if status < 0 {
+        return Err(format!("NtWriteVirtualMemory failed: {:#x}", status));
+    }
+
+    Ok(bytes_written)
+}

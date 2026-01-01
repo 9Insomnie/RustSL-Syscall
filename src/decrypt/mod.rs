@@ -16,10 +16,10 @@ mod xchacha20;
 mod ecc;
 
 #[allow(unreachable_code)]
-pub unsafe fn decrypt( decoded: &[u8]) -> Result<(usize, usize), String> {
+pub unsafe fn decrypt(_decoded: &[u8]) -> Result<(usize, usize), String> {
 	#[cfg(feature = "decrypt_ipv4")]
 	{
-		return ipv4::decrypt(decoded);
+		return ipv4::decrypt(_decoded);
 	}
 	#[cfg(feature = "decrypt_ipv6")]
 	{

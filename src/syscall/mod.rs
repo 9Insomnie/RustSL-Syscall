@@ -47,15 +47,19 @@ macro_rules! syscall {
                     }
                 }
 
-                #[cfg(any(feature = "hw_syscall", feature = "kfd_syscall"))]
+                #[cfg(all(any(feature = "hw_syscall", feature = "kfd_syscall"), not(any(feature = "freshycalls_syswhispers", feature = "hells_halos_tartarus_gate"))))]
                 {
                     if let Some(addr) = $crate::syscall::get_syscall(base, $func_hash) {
                         let func: $fn_type = core::mem::transmute(addr);
-                        // For hw_syscall and kfd_syscall, convert u64 args back to expected types
                         Some(func($($arg as _),*) as i32)
                     } else {
                         None
                     }
+                }
+
+                #[cfg(not(any(feature = "freshycalls_syswhispers", feature = "hells_halos_tartarus_gate", feature = "hw_syscall", feature = "kfd_syscall")))]
+                {
+                    None
                 }
             } else {
                 None

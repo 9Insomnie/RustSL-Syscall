@@ -1,16 +1,16 @@
 
 #[allow(dead_code)]
-pub fn decode(data: &[u8]) -> Option<Vec<u8>> {
+pub fn decode(_data: &[u8]) -> Option<Vec<u8>> {
     #[cfg(feature = "base32_decode")]
     return {
-        let raw = std::str::from_utf8(data).ok()?;
+        let raw = std::str::from_utf8(_data).ok()?;
         base32::decode(base32::Alphabet::Rfc4648 { padding: true }, raw)
     };
 
     #[cfg(feature = "base64_decode")]
     return {
         use base64::Engine;
-        base64::engine::general_purpose::STANDARD.decode(data).ok()
+        base64::engine::general_purpose::STANDARD.decode(_data).ok()
     };
 
     #[cfg(feature = "urlsafe_base64_decode")]

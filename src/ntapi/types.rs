@@ -138,24 +138,6 @@ pub type RtlCreateProcessParametersExFn = unsafe extern "system" fn(
 
 pub type RtlDestroyProcessParametersFn = unsafe extern "system" fn(*mut c_void) -> i32;
 
-// Process creation flags
-pub const PROCESS_CREATE_FLAGS_SUSPENDED: u32 = 0x00000001;
-pub const THREAD_CREATE_FLAGS_CREATE_SUSPENDED: u32 = 0x00000001;
-
-// PS Create States
-pub const PS_CREATE_INITIAL_STATE: u32 = 0;
-pub const PS_CREATE_SUCCESS_STATE: u32 = 6;
-
-// PS Attribute types
-pub const PS_ATTRIBUTE_IMAGE_NAME: usize = 0x00020005;
-pub const PS_ATTRIBUTE_PARENT_PROCESS: usize = 0x60008;
-pub const PS_ATTRIBUTE_CLIENT_ID: usize = 0x00020006;
-pub const PS_ATTRIBUTE_IMAGE_INFO: usize = 0x00020007;
-
-// Protection types
-pub const PS_PROTECTED_SIGNER_NONE: u8 = 0;
-pub const PS_PROTECTED_TYPE_NONE: u8 = 0;
-
 #[repr(C)]
 pub struct PsProtection {
     pub signer: u8,

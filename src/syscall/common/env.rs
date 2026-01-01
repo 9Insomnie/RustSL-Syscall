@@ -1,23 +1,11 @@
 use ntapi::{ntldr::LDR_DATA_TABLE_ENTRY, ntpebteb::PEB, ntpsapi::PEB_LDR_DATA};
 use std::arch::asm;
-// 如果你确定要移除 sysinfo 依赖，请在 Cargo.toml 删除，并在此处根据需要实现原生逻辑
-use sysinfo::{ProcessExt, SystemExt}; 
 use windows::Win32::System::Threading::GetCurrentThread;
 use dinvoke_rs::data::{PVOID, TLS_OUT_OF_INDEXES};
 use dinvoke_rs::dinvoke;
 use lazy_static::lazy_static;
 
 static mut TLS_INDEX: u32 = 0; 
-
-pub fn get_process_id_by_name(target_process: &str) -> usize {
-    let mut system = sysinfo::System::new();
-    system.refresh_all();
-    let mut process_id: usize = 0;
-    for process in system.processes_by_name(target_process) {
-        process_id = process.pid().into();
-    }
-    process_id
-}
 
 #[cfg(target_arch = "x86")]
 pub unsafe fn get_teb() -> *mut ntapi::ntpebteb::TEB {
