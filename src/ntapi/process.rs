@@ -344,6 +344,50 @@ pub fn create_process(
     }
 }
 
+pub fn ldr_load_dll(dll_name: &str, dll_hash: u32) -> crate::utils::error::RslResult<isize> {
+    use crate::syscall::common::get_loaded_module_by_hash;
+    use crate::syscall::common::pe::get_export_by_hash;
+
+    // 1. Try to find the module by hash first
+    if let Some(base) = unsafe { get_loaded_module_by_hash(dll_hash) } {
+        return Ok(base as isize);
+    }
+
+    // 2. If not found, load it using LdrLoadDll
+    let ntdll_hash = crate::dbj2_hash!(b"ntdll.dll");
+    let ntdll_base = unsafe { get_loaded_module_by_hash(ntdll_hash) }
+        .ok_or(RslError::ModuleNotFound(ntdll_hash))?;
+
+    let ldr_load_dll_hash = crate::dbj2_hash!(b"LdrLoadDll");
+    let ldr_load_dll_addr = unsafe { get_export_by_hash(ntdll_base, ldr_load_dll_hash) }
+        .ok_or(RslError::FunctionNotFound(ldr_load_dll_hash))?;
+
+    let ldr_load_dll: LdrLoadDllFn = unsafe { core::mem::transmute(ldr_load_dll_addr) };
+
+    let mut utf16_name: Vec<u16> = dll_name.encode_utf16().collect();
+    let mut unicode_string = UnicodeString {
+        length: (utf16_name.len() * 2) as u16,
+        maximum_length: (utf16_name.len() * 2) as u16,
+        buffer: utf16_name.as_mut_ptr(),
+    };
+
+    let mut handle: *mut c_void = core::ptr::null_mut();
+    let status = unsafe {
+        ldr_load_dll(
+            core::ptr::null_mut(),
+            core::ptr::null_mut(),
+            &mut unicode_string,
+            &mut handle,
+        )
+    };
+
+    if status < 0 {
+        return Err(RslError::NtStatus(status));
+    }
+
+    Ok(handle as isize)
+}
+
 pub unsafe fn create_process_with_spoofing(
     target_program: &str,
     suspended: bool,

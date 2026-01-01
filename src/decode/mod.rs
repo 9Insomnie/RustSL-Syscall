@@ -34,5 +34,5 @@ pub fn decode(data: &[u8]) -> Option<Vec<u8>> {
             feature = "hex_decode"
         ))
     ))]
-    return Some(data.to_vec()) ;
+    return Some(data.to_vec());
 }

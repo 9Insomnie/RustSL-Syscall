@@ -281,3 +281,6 @@ pub struct PsCreateSuccessState {
     pub output_flags: u32,
     pub additional_file_access: u32,
 }
+
+pub type LdrLoadDllFn =
+    unsafe extern "system" fn(*mut u16, *mut u32, *mut UnicodeString, *mut *mut c_void) -> i32;

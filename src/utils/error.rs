@@ -49,4 +49,10 @@ impl From<String> for RslError {
     }
 }
 
+impl From<std::io::Error> for RslError {
+    fn from(e: std::io::Error) -> Self {
+        RslError::IoError(e)
+    }
+}
+
 pub type RslResult<T> = Result<T, RslError>;

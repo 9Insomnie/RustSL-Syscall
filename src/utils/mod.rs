@@ -6,9 +6,6 @@ pub use http::http_get;
 pub mod hash;
 pub use hash::dbj2_hash;
 
-mod load_api;
-pub use load_api::{get_proc_address, load_library};
-
 #[cfg(feature = "debug")]
 mod debug;
 #[cfg(feature = "debug")]
