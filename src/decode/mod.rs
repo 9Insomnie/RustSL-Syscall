@@ -26,20 +26,13 @@ pub fn decode(data: &[u8]) -> Option<Vec<u8>> {
         hex::decode(raw.trim()).ok()
     };
 
-    #[cfg(feature = "none_decode")]
-    return {
-        Some(data.to_vec())
-    };
-
-    #[cfg(not(any(
+    #[cfg(any(feature = "none_decode", not(any(
         feature = "base32_decode",
         feature = "base64_decode",
         feature = "urlsafe_base64_decode",
-        feature = "hex_decode",
-        feature = "none_decode"
-    )))]
-    {
-        // 如果没有启用任何 decode feature，返回 None
-        None
-    }
+        feature = "hex_decode"
+    ))))]
+    return {
+        Some(data.to_vec())
+    };
 }
