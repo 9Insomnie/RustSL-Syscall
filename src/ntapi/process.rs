@@ -79,26 +79,26 @@ pub fn query_information_process(
 }
 
 pub fn normalize_nt_path(target: &str) -> RslResult<String> {
-    let sys_root = env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_string());
-    let mut path = PathBuf::from(target.replace("/", "\\"));
+    let sys_root = env::var(obfstr!("SystemRoot")).unwrap_or_else(|_| obfstr!("C:\\Windows").to_string());
+    let mut path = PathBuf::from(target.replace(obfstr!("/"), obfstr!("\\")));
 
     let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-    if file_name.eq_ignore_ascii_case("notepad.exe") {
-        path = PathBuf::from(&sys_root).join("notepad.exe");
+    if file_name.eq_ignore_ascii_case(obfstr!("notepad.exe")) {
+        path = PathBuf::from(&sys_root).join(obfstr!("notepad.exe"));
     } else if path.parent().map_or(true, |p| p.as_os_str().is_empty()) {
-        path = PathBuf::from(&sys_root).join("System32").join(target);
+        path = PathBuf::from(&sys_root).join(obfstr!("System32")).join(target);
     }
 
     let canonical = path.canonicalize().map_err(|e| RslError::IoError(e))?;
     let path_str = canonical
         .to_str()
-        .ok_or_else(|| RslError::Other("Invalid UTF-8".to_string()))?;
+        .ok_or_else(|| RslError::Other(obfstr!("Invalid UTF-8").to_string()))?;
 
     if let Ok(kernel_path) = get_kernel_native_path(path_str) {
         return Ok(kernel_path);
     }
 
-    Ok(path_str.replace(r"\\?\", r"\??\"))
+    Ok(path_str.replace(obfstr!(r"\\?\"), obfstr!(r"\??\")))
 }
 
 pub fn get_kernel_native_path(path: &str) -> RslResult<String> {
@@ -123,7 +123,7 @@ pub fn get_kernel_native_path(path: &str) -> RslResult<String> {
 
     if len == 0 {
         return Err(RslError::Other(
-            "GetFinalPathNameByHandleW failed".to_string(),
+            obfstr!("GetFinalPathNameByHandleW failed").to_string(),
         ));
     }
 
@@ -160,14 +160,18 @@ pub fn enable_debug_privilege() -> RslResult<()> {
     };
 
     unsafe {
-        let priv_name = "SeDebugPrivilege\0".encode_utf16().collect::<Vec<u16>>();
+        let priv_name = obfstr!("SeDebugPrivilege\0")
+            .encode_utf16()
+            .collect::<Vec<u16>>();
         if windows_sys::Win32::Security::LookupPrivilegeValueW(
             core::ptr::null(),
             priv_name.as_ptr(),
             &mut luid,
         ) == 0
         {
-            return Err(RslError::Other("LookupPrivilegeValueW failed".to_string()));
+            return Err(RslError::Other(
+                obfstr!("LookupPrivilegeValueW failed").to_string(),
+            ));
         }
 
         let mut tp = TOKEN_PRIVILEGES {
