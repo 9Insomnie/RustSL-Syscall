@@ -27,7 +27,6 @@ fn print_log(
     let elapsed = START_TIME.elapsed().as_secs_f32();
     let time_tag = format!("[{:>04.2}s]", elapsed).bright_black();
 
-    // 第一行：时间戳 + Emoji + 源码位置
     println!(
         "{} {}  {}",
         time_tag,

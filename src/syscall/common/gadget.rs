@@ -1,5 +1,5 @@
 use super::*;
-use crate::ntapi::def::{TLS_OUT_OF_INDEXES, UNW_FLAG_CHAININFO, UNW_FLAG_EHANDLER};
+use crate::ntapi::def::{UNW_FLAG_CHAININFO, UNW_FLAG_EHANDLER};
 use crate::ntapi::types::PVOID;
 use crate::syscall::common::pe::{RuntimeFunction, ADD_RSP, JMP_RBX};
 use bitreader::BitReader;

@@ -1,10 +1,7 @@
 use crate::ntapi::types::{
-    LdrGetDllHandleByAddressFn, LocalAllocFn, NtQueryInformationThreadFn, TlsAllocFn,
-    TlsGetValueFn, TlsSetValueFn, PVOID,
+    LocalAllocFn, TlsAllocFn, TlsGetValueFn, TlsSetValueFn,
 };
 use crate::ntapi::TLS_OUT_OF_INDEXES;
-use crate::{raw_syscall, syscall};
-use core::ffi::c_void;
 use ntapi::{ntldr::LDR_DATA_TABLE_ENTRY, ntpebteb::PEB, ntpsapi::PEB_LDR_DATA};
 use std::arch::asm;
 
@@ -50,14 +47,11 @@ pub unsafe fn get_loaded_module_by_hash(module_hash: u32) -> Option<*mut u8> {
     None
 }
 
-// If it fails to do so, it will return the BaseThreadInitThunk's frame address instead.
-pub fn get_desirable_return_address(current_rsp: usize, keep_start_function_frame: bool) -> usize {
+pub fn get_desirable_return_address(current_rsp: usize) -> usize {
     unsafe {
         let k32 = get_loaded_module_by_hash(crate::dbj2_hash!(b"kernel32.dll"))
             .unwrap_or(std::ptr::null_mut());
         let mut addr: usize = 0;
-        let mut start_address = 1;
-        let mut end_address = 0;
         let base_thread_init_thunk_start = crate::syscall::common::pe::get_export_by_hash(
             k32,
             crate::dbj2_hash!(b"BaseThreadInitThunk"),
@@ -75,69 +69,12 @@ pub fn get_desirable_return_address(current_rsp: usize, keep_start_function_fram
                 .unwrap();
         let tls_get_value: TlsGetValueFn = std::mem::transmute(tls_get_value_ptr);
 
-        let thread_information = 0usize;
-        let thread_information: PVOID = std::mem::transmute(&thread_information);
-        let thread_info_len = 8u32;
-        let ret_len = 0u32;
-        let ret_len: *mut u32 = std::mem::transmute(&ret_len);
-        if keep_start_function_frame {
-            // Obtain current thread's start address
-            let ret = raw_syscall!(
-                crate::dbj2_hash!(b"NtQueryInformationThread"),
-                NtQueryInformationThreadFn,
-                -2isize as u64, // GetCurrentThread()
-                9u32 as u64,
-                thread_information as u64,
-                thread_info_len as u64,
-                ret_len as u64,
-            )
-            .unwrap_or(-1);
-
-            if ret == 0 {
-                let thread_information = thread_information as *mut usize;
-
-                let function_address: *const u8 = *thread_information as _;
-                let mut module_handle: *mut c_void = std::ptr::null_mut();
-
-                let ntdll_hash = crate::dbj2_hash!(b"ntdll.dll");
-                let ntdll_base =
-                    get_loaded_module_by_hash(ntdll_hash).unwrap_or(std::ptr::null_mut());
-
-                let ldr_get_ptr = crate::syscall::common::pe::get_export_by_hash(
-                    ntdll_base,
-                    crate::dbj2_hash!(b"LdrGetDllHandleByAddress"),
-                )
-                .unwrap();
-                let ldr_get_dll_handle_by_address: LdrGetDllHandleByAddressFn =
-                    std::mem::transmute(ldr_get_ptr);
-
-                // Determine the module where the current thread's start function is located at.
-                let status = ldr_get_dll_handle_by_address(
-                    function_address as *mut c_void,
-                    &mut module_handle,
-                );
-
-                if status == 0 {
-                    let base_address = module_handle as usize;
-                    let function_addresses = crate::syscall::common::pe::get_function_size(
-                        base_address,
-                        function_address as _,
-                    );
-                    start_address = function_addresses.0;
-                    end_address = function_addresses.1;
-                }
-            }
-        }
-
         let mut stack_iterator: *mut usize = current_rsp as *mut usize;
         let mut found = false;
 
         while !found {
-            // Check whether the value stored in this stack's address is located at current thread's start function or
-            // BaseThreadInitThunk. Otherwise, iterate to the next word in the stack and repeat the process.
-            if (*stack_iterator > start_address && *stack_iterator < end_address)
-                || (*stack_iterator > base_thread_init_thunk_start as usize
-                    && *stack_iterator < base_thread_init_thunk_end)
+            if *stack_iterator > base_thread_init_thunk_start as usize
+                && *stack_iterator < base_thread_init_thunk_end
             {
                 addr = stack_iterator as usize;
                 let data = tls_get_value(TLS_INDEX) as *mut usize;

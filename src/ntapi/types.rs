@@ -84,12 +84,6 @@ pub type NtSetContextThreadFn = unsafe extern "system" fn(isize, *const std::ffi
 
 pub type NtResumeThreadFn = unsafe extern "system" fn(isize, *mut u32) -> i32;
 
-pub type NtQueryInformationThreadFn =
-    unsafe extern "system" fn(isize, u32, *mut c_void, u32, *mut u32) -> i32;
-
-pub type LdrGetDllHandleByAddressFn =
-    unsafe extern "system" fn(*mut c_void, *mut *mut c_void) -> i32;
-
 pub type NtOpenProcessFn =
     unsafe extern "system" fn(*mut isize, u32, *mut ObjectAttributes, *mut ClientId) -> i32;
 

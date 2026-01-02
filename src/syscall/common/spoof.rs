@@ -1,24 +1,11 @@
 #![allow(dead_code, unused_imports)]
 
-use crate::ntapi::def::{
-    PAGE_EXECUTE_READ, PAGE_EXECUTE_READWRITE, PAGE_READONLY, PAGE_READWRITE, TLS_OUT_OF_INDEXES,
-    UNW_FLAG_CHAININFO, UNW_FLAG_EHANDLER,
-};
 use crate::ntapi::types::PVOID;
-use crate::syscall::common::pe::{RuntimeFunction, ADD_RSP, JMP_RBX};
+use crate::syscall::common::pe::{ADD_RSP, JMP_RBX};
 use crate::syscall::common::*;
-use bitreader::BitReader;
 use lazy_static::lazy_static;
-use nanorand::{Rng, WyRand};
-use obfstr::obfstr;
 use std::collections::HashMap;
-use std::ffi::c_void;
-use std::mem::size_of;
 use std::sync::{Arc, Mutex};
-use windows_sys::Win32::Foundation::HANDLE;
-use windows_sys::Win32::System::Memory::MEMORY_BASIC_INFORMATION;
-use windows_sys::Win32::System::SystemInformation::SYSTEM_INFO;
-use windows_sys::Win32::System::Threading::GetCurrentThread;
 
 extern "C" {
     pub fn spoof_call(structure: PVOID) -> PVOID;
@@ -110,8 +97,6 @@ pub fn syscall_with_spoof(
         config.syscall = 1;
         config.syscall_id = data.ssn as u32;
 
-        let keep_start_function_frame = false; // For syscall, default to false
-
         let mut args_number = args.len();
         config.nargs = args_number;
 
@@ -137,7 +122,7 @@ pub fn syscall_with_spoof(
         let mut spoofy = env::get_cookie_value();
         if spoofy == 0 {
             let current_rsp = get_current_rsp();
-            spoofy = env::get_desirable_return_address(current_rsp, keep_start_function_frame);
+            spoofy = env::get_desirable_return_address(current_rsp);
         }
 
         config.return_address = spoofy as *mut _;

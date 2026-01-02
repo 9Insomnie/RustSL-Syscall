@@ -90,8 +90,6 @@ pub unsafe extern "system" fn exception_handler(exception_info: *mut EXCEPTION_P
             let function_addr = ((*context_record).Rip - 3) as *mut u8;
 
             if let Some(ssn) = get_ssn(function_addr) {
-                #[cfg(feature = "debug")]
-                crate::utils::print_message(&format!("SSN found: {:#x}", ssn));
                 (*context_record).Rax = ssn as u64;
             } else {
             }

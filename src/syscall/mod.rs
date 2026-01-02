@@ -171,30 +171,3 @@ macro_rules! syscall {
         }
     };
 }
-
-#[macro_export]
-macro_rules! raw_syscall {
-    ($func_hash:expr, $fn_type:ty, $($arg:expr),* $(,)?) => {
-        {
-            use $crate::syscall::SyscallProvider;
-            let ntdll_hash = $crate::dbj2_hash!(b"ntdll.dll");
-            let ntdll_base = $crate::syscall::common::get_loaded_module_by_hash(ntdll_hash);
-
-            if let Some(base) = ntdll_base {
-                match $crate::syscall::CurrentProvider::resolve(base, $func_hash) {
-                    Some($crate::syscall::ResolvedSyscall::Indirect(data)) => {
-                        let func: $fn_type = core::mem::transmute(data.entry);
-                        Some(func($($arg as _),*) as i32)
-                    }
-                    Some($crate::syscall::ResolvedSyscall::Direct(addr)) => {
-                        let func: $fn_type = core::mem::transmute(addr);
-                        Some(func($($arg as _),*) as i32)
-                    }
-                    None => None,
-                }
-            } else {
-                None
-            }
-        }
-    };
-}
