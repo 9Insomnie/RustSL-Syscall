@@ -81,8 +81,9 @@ fn main() {
 }
 
 fn copy_bundle_file() {
-    let bundle_file = env::var("RSL_BUNDLE_FILE")
-        .expect("RSL_BUNDLE_FILE environment variable must be set when using with_bundling feature");
+    let bundle_file = env::var("RSL_BUNDLE_FILE").expect(
+        "RSL_BUNDLE_FILE environment variable must be set when using with_bundling feature",
+    );
 
     // Ensure absolute path
     let bundle_file = std::path::Path::new(&bundle_file);

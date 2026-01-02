@@ -1,7 +1,7 @@
 use super::types::*;
 use crate::ntapi::def::{CURRENT_PROCESS, PROCESS_ALL_ACCESS};
 use crate::syscall;
-use crate::utils::{Handle, RslError, RslResult};
+use crate::utils::{Handle, NtStatusExt, RslError, RslResult};
 use core::ffi::c_void;
 use ntapi::ntapi_base::*;
 use ntapi::ntpsapi::*;
@@ -31,7 +31,7 @@ pub fn open_process(pid: u32, access: u32) -> RslResult<isize> {
 
     let nt_open_hash = crate::dbj2_hash!(b"NtOpenProcess");
 
-    let status = unsafe {
+    unsafe {
         syscall!(
             nt_open_hash,
             NtOpenProcessFn,
@@ -40,13 +40,10 @@ pub fn open_process(pid: u32, access: u32) -> RslResult<isize> {
             (&mut oa as *mut ObjectAttributes as u64),
             (&mut client_id as *mut ClientId as u64)
         )
-    };
-
-    match status {
-        Some(s) if s < 0 => Err(RslError::NtStatus(s)),
-        Some(_) => Ok(handle),
-        None => Err(RslError::SyscallFailed(nt_open_hash)),
     }
+    .check(nt_open_hash)?;
+
+    Ok(handle)
 }
 
 pub fn query_information_process(
@@ -58,7 +55,7 @@ pub fn query_information_process(
 ) -> RslResult<i32> {
     let nt_query_hash = crate::dbj2_hash!(b"NtQueryInformationProcess");
 
-    let status = unsafe {
+    unsafe {
         syscall!(
             nt_query_hash,
             NtQueryInformationProcessFn,
@@ -68,12 +65,8 @@ pub fn query_information_process(
             process_information_length as u64,
             return_length as u64
         )
-    };
-
-    match status {
-        Some(s) => Ok(s),
-        None => Err(RslError::SyscallFailed(nt_query_hash)),
     }
+    .check(nt_query_hash)
 }
 
 pub fn normalize_nt_path(target: &str) -> RslResult<String> {
@@ -136,7 +129,7 @@ pub fn enable_debug_privilege() -> RslResult<()> {
     let mut h_token: isize = 0;
     let nt_open_token_hash = crate::dbj2_hash!(b"NtOpenProcessToken");
 
-    let status = unsafe {
+    unsafe {
         syscall!(
             nt_open_token_hash,
             NtOpenProcessTokenFn,
@@ -144,15 +137,8 @@ pub fn enable_debug_privilege() -> RslResult<()> {
             0x0020 as u64, // TOKEN_ADJUST_PRIVILEGES
             &mut h_token as *mut isize as u64
         )
-    };
-
-    if let Some(s) = status {
-        if s < 0 {
-            return Err(RslError::NtStatus(s));
-        }
-    } else {
-        return Err(RslError::SyscallFailed(nt_open_token_hash));
     }
+    .check(nt_open_token_hash)?;
 
     let token = Handle::from(h_token);
     let mut luid = LUID {
@@ -184,7 +170,7 @@ pub fn enable_debug_privilege() -> RslResult<()> {
         };
 
         let nt_adjust_hash = crate::dbj2_hash!(b"NtAdjustPrivilegesToken");
-        let status = syscall!(
+        syscall!(
             nt_adjust_hash,
             NtAdjustPrivilegesTokenFn,
             token.as_raw() as u64,
@@ -193,15 +179,8 @@ pub fn enable_debug_privilege() -> RslResult<()> {
             std::mem::size_of::<TOKEN_PRIVILEGES>() as u64,
             core::ptr::null_mut::<c_void>() as u64,
             core::ptr::null_mut::<u32>() as u64
-        );
-
-        if let Some(s) = status {
-            if s < 0 {
-                return Err(RslError::NtStatus(s));
-            }
-        } else {
-            return Err(RslError::SyscallFailed(nt_adjust_hash));
-        }
+        )
+        .check(nt_adjust_hash)?;
     }
 
     Ok(())

@@ -30,11 +30,7 @@ impl std::fmt::Display for RslError {
         }
     }
 }
-impl From<RslError> for String {
-    fn from(err: RslError) -> Self {
-        format!("{}", err)
-    }
-}
+
 impl std::error::Error for RslError {}
 
 impl From<&str> for RslError {
@@ -56,3 +52,17 @@ impl From<std::io::Error> for RslError {
 }
 
 pub type RslResult<T> = Result<T, RslError>;
+
+pub trait NtStatusExt {
+    fn check(self, hash: u32) -> RslResult<i32>;
+}
+
+impl NtStatusExt for Option<i32> {
+    fn check(self, hash: u32) -> RslResult<i32> {
+        match self {
+            Some(s) if s < 0 => Err(RslError::NtStatus(s)),
+            Some(s) => Ok(s),
+            None => Err(RslError::SyscallFailed(hash)),
+        }
+    }
+}

