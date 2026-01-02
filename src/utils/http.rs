@@ -92,14 +92,7 @@ pub fn http_get(url: &str) -> crate::utils::error::RslResult<(u16, Vec<u8>)> {
                 .map_err(|_| crate::utils::error::RslError::from(obfstr!("Invalid port")))?,
         )
     } else {
-        (
-            host_port,
-            if scheme == obfstr!("https") {
-                443
-            } else {
-                80
-            },
-        )
+        (host_port, if scheme == obfstr!("https") { 443 } else { 80 })
     };
     let is_ssl = scheme == obfstr!("https");
 

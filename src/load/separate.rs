@@ -23,12 +23,7 @@ pub fn load() -> crate::utils::error::RslResult<Vec<u8>> {
         // Local file loading with existence check
         let path = std::path::Path::new(&address);
         if !path.exists() {
-            return Err(format!(
-                "{} {}",
-                obfstr!("Resource unavailable:"),
-                path.display()
-            )
-            .into());
+            return Err(format!("{} {}", obfstr!("Resource unavailable:"), path.display()).into());
         }
 
         Ok(std::fs::read(&address)?)

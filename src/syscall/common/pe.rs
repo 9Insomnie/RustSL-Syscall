@@ -129,7 +129,8 @@ pub fn get_pe_metadata(module_ptr: *const u8, check_signature: bool) -> Result<P
 
         if pe_arch == 0x010B {
             pe_metadata.is_32_bit = true;
-            let opt_header_content: *const IMAGE_OPTIONAL_HEADER32 = std::mem::transmute(opt_header);
+            let opt_header_content: *const IMAGE_OPTIONAL_HEADER32 =
+                std::mem::transmute(opt_header);
             pe_metadata.opt_header_32 = *opt_header_content;
         } else if pe_arch == 0x020B {
             pe_metadata.is_32_bit = false;

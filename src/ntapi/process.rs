@@ -77,14 +77,17 @@ pub fn query_information_process(
 }
 
 pub fn normalize_nt_path(target: &str) -> RslResult<String> {
-    let sys_root = env::var(obfstr!("SystemRoot")).unwrap_or_else(|_| obfstr!("C:\\Windows").to_string());
+    let sys_root =
+        env::var(obfstr!("SystemRoot")).unwrap_or_else(|_| obfstr!("C:\\Windows").to_string());
     let mut path = PathBuf::from(target.replace(obfstr!("/"), obfstr!("\\")));
 
     let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     if file_name.eq_ignore_ascii_case(obfstr!("notepad.exe")) {
         path = PathBuf::from(&sys_root).join(obfstr!("notepad.exe"));
     } else if path.parent().map_or(true, |p| p.as_os_str().is_empty()) {
-        path = PathBuf::from(&sys_root).join(obfstr!("System32")).join(target);
+        path = PathBuf::from(&sys_root)
+            .join(obfstr!("System32"))
+            .join(target);
     }
 
     let canonical = path.canonicalize().map_err(|e| RslError::IoError(e))?;
