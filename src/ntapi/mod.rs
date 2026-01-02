@@ -1,13 +1,13 @@
 #![allow(dead_code, unused_imports)]
 
-mod def;
-mod io;
-mod memory;
-mod object;
-mod process;
-mod sync;
-mod system;
-mod thread;
+pub mod def;
+pub mod io;
+pub mod memory;
+pub mod object;
+pub mod process;
+pub mod sync;
+pub mod system;
+pub mod thread;
 pub mod types;
 
 pub use def::*;

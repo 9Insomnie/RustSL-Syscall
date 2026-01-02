@@ -2,11 +2,12 @@
 
 use crate::syscall::common::*;
 use bitreader::BitReader;
-use dinvoke_rs::data::{
-    RuntimeFunction, ADD_RSP, JMP_RBX, PVOID, TLS_OUT_OF_INDEXES, UNW_FLAG_CHAININFO,
-    UNW_FLAG_EHANDLER,
+use crate::ntapi::def::{
+    TLS_OUT_OF_INDEXES, UNW_FLAG_CHAININFO, UNW_FLAG_EHANDLER, PAGE_EXECUTE_READ,
+    PAGE_EXECUTE_READWRITE, PAGE_READONLY, PAGE_READWRITE,
 };
-use dinvoke_rs::data::{PAGE_EXECUTE_READ, PAGE_EXECUTE_READWRITE, PAGE_READONLY, PAGE_READWRITE};
+use crate::ntapi::types::PVOID;
+use crate::syscall::common::pe::{RuntimeFunction, ADD_RSP, JMP_RBX};
 use lazy_static::lazy_static;
 use nanorand::{Rng, WyRand};
 use obfstr::obfstr;

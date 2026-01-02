@@ -2,6 +2,8 @@
 
 use core::ffi::c_void;
 
+pub type PVOID = *mut c_void;
+
 #[repr(C)]
 pub struct UnicodeString {
     pub length: u16,
@@ -81,6 +83,12 @@ pub type NtGetContextThreadFn = unsafe extern "system" fn(isize, *mut std::ffi::
 pub type NtSetContextThreadFn = unsafe extern "system" fn(isize, *const std::ffi::c_void) -> i32;
 
 pub type NtResumeThreadFn = unsafe extern "system" fn(isize, *mut u32) -> i32;
+
+pub type NtQueryInformationThreadFn =
+    unsafe extern "system" fn(isize, u32, *mut c_void, u32, *mut u32) -> i32;
+
+pub type LdrGetDllHandleByAddressFn =
+    unsafe extern "system" fn(*mut c_void, *mut *mut c_void) -> i32;
 
 pub type NtOpenProcessFn =
     unsafe extern "system" fn(*mut isize, u32, *mut ObjectAttributes, *mut ClientId) -> i32;
@@ -284,3 +292,8 @@ pub struct PsCreateSuccessState {
 
 pub type LdrLoadDllFn =
     unsafe extern "system" fn(*mut u16, *mut u32, *mut UnicodeString, *mut *mut c_void) -> i32;
+
+pub type TlsAllocFn = unsafe extern "system" fn() -> u32;
+pub type TlsGetValueFn = unsafe extern "system" fn(u32) -> PVOID;
+pub type TlsSetValueFn = unsafe extern "system" fn(u32, PVOID) -> i32;
+pub type LocalAllocFn = unsafe extern "system" fn(u32, usize) -> PVOID;

@@ -11,9 +11,7 @@ use std::env;
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
 use std::path::PathBuf;
-use windows::core::PWSTR;
-use windows::Win32::Foundation::UNICODE_STRING;
-use windows_sys::Win32::Foundation::LUID;
+use windows_sys::Win32::Foundation::{LUID, UNICODE_STRING};
 use windows_sys::Win32::Security::*;
 
 pub fn open_process(pid: u32, access: u32) -> RslResult<isize> {
@@ -217,7 +215,7 @@ pub fn create_process(
     let mut image_path_unicode = UNICODE_STRING {
         Length: ((nt_path_u16.len() - 1) * 2) as u16,
         MaximumLength: (nt_path_u16.len() * 2) as u16,
-        Buffer: PWSTR(nt_path_u16.as_ptr() as *mut u16),
+        Buffer: nt_path_u16.as_ptr() as *mut u16,
     };
 
     let ntdll_hash = crate::dbj2_hash!(b"ntdll.dll");

@@ -12,7 +12,6 @@ edition = "2021"
 tempfile = "3.10.1"
 base64 = "0.21.5"
 base32 = "0.5.1"
-windows = { version = "0.51.1", features = ["Win32_Foundation", "Win32_System_Threading"] }
 uuid = { version = "1.0", features = ["v4"] }
 sha2 = "0.10"
 obfstr = "0.4"
@@ -34,7 +33,6 @@ rsl-macros = { path = "rsl-macros" }
 ntapi = "0.4.0"
 nanorand = "0.7"
 bitreader = "0.3"
-dinvoke_rs = "=0.2.0"
 lazy_static = "1.4"
 
 [dependencies.windows-sys]
@@ -49,6 +47,11 @@ features = [
     "Win32_System_SystemInformation",
     "Win32_System_Kernel",
     "Win32_Storage_FileSystem",
+    "Win32_Graphics_Printing",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_WindowsProgramming",
+    "Win32_System_IO",
+    "Win32_System_LibraryLoader",
 ]
 
 [build-dependencies]

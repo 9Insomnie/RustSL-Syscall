@@ -1,10 +1,9 @@
-use dinvoke_rs::data::{PVOID, TLS_OUT_OF_INDEXES};
-use dinvoke_rs::dinvoke;
-use lazy_static::lazy_static;
+use crate::ntapi::TLS_OUT_OF_INDEXES;
+use crate::ntapi::types::{PVOID, TlsAllocFn, TlsGetValueFn, TlsSetValueFn, LocalAllocFn, NtQueryInformationThreadFn, LdrGetDllHandleByAddressFn};
+use crate::{syscall, raw_syscall};
 use ntapi::{ntldr::LDR_DATA_TABLE_ENTRY, ntpebteb::PEB, ntpsapi::PEB_LDR_DATA};
 use std::arch::asm;
-use windows::Win32::Foundation::HANDLE;
-use windows::Win32::System::Threading::GetCurrentThread;
+use core::ffi::c_void;
 
 static mut TLS_INDEX: u32 = 0;
 
@@ -67,8 +66,10 @@ pub fn get_desirable_return_address(current_rsp: usize, keep_start_function_fram
         );
 
         let base_thread_init_thunk_end = base_thread_init_thunk_addresses.1;
-        let thread_handle = GetCurrentThread();
-        let thread_info_class = 9u32;
+        
+        let tls_get_value_ptr = crate::syscall::common::pe::get_export_by_hash(k32, crate::dbj2_hash!(b"TlsGetValue")).unwrap();
+        let tls_get_value: TlsGetValueFn = std::mem::transmute(tls_get_value_ptr);
+
         let thread_information = 0usize;
         let thread_information: PVOID = std::mem::transmute(&thread_information);
         let thread_info_len = 8u32;
@@ -76,26 +77,36 @@ pub fn get_desirable_return_address(current_rsp: usize, keep_start_function_fram
         let ret_len: *mut u32 = std::mem::transmute(&ret_len);
         if keep_start_function_frame {
             // Obtain current thread's start address
-            let ret = dinvoke::nt_query_information_thread(
-                thread_handle,
-                thread_info_class,
-                thread_information,
-                thread_info_len,
-                ret_len,
-            );
+            let ret = raw_syscall!(
+                crate::dbj2_hash!(b"NtQueryInformationThread"),
+                NtQueryInformationThreadFn,
+                -2isize as u64, // GetCurrentThread()
+                9u32 as u64,
+                thread_information as u64,
+                thread_info_len as u64,
+                ret_len as u64,
+            ).unwrap_or(-1);
+
             if ret == 0 {
                 let thread_information = thread_information as *mut usize;
 
-                let flags = 0x00000004;
                 let function_address: *const u8 = *thread_information as _;
-                let module_handle = 0usize;
-                let module_handle: *mut usize = std::mem::transmute(&module_handle);
+                let mut module_handle: *mut c_void = std::ptr::null_mut();
+
+                let ntdll_hash = crate::dbj2_hash!(b"ntdll.dll");
+                let ntdll_base = get_loaded_module_by_hash(ntdll_hash).unwrap_or(std::ptr::null_mut());
+
+                let ldr_get_ptr = crate::syscall::common::pe::get_export_by_hash(
+                    ntdll_base, 
+                    crate::dbj2_hash!(b"LdrGetDllHandleByAddress")
+                ).unwrap();
+                let ldr_get_dll_handle_by_address: LdrGetDllHandleByAddressFn = std::mem::transmute(ldr_get_ptr);
 
                 // Determine the module where the current thread's start function is located at.
-                let ret = dinvoke::get_module_handle_ex_a(flags, function_address, module_handle);
+                let status = ldr_get_dll_handle_by_address(function_address as *mut c_void, &mut module_handle);
 
-                if ret {
-                    let base_address = *module_handle;
+                if status == 0 {
+                    let base_address = module_handle as usize;
                     let function_addresses = crate::syscall::common::pe::get_function_size(
                         base_address,
                         function_address as _,
@@ -117,7 +128,7 @@ pub fn get_desirable_return_address(current_rsp: usize, keep_start_function_fram
                     && *stack_iterator < base_thread_init_thunk_end)
             {
                 addr = stack_iterator as usize;
-                let data = dinvoke::tls_get_value(TLS_INDEX) as *mut usize;
+                let data = tls_get_value(TLS_INDEX) as *mut usize;
                 *data = addr;
                 found = true;
             }
@@ -133,8 +144,13 @@ pub fn get_desirable_return_address(current_rsp: usize, keep_start_function_fram
 // This allows to efficiently concatenate the spoofing process as many times as needed.
 pub fn get_cookie_value() -> usize {
     unsafe {
+        let k32 = get_loaded_module_by_hash(crate::dbj2_hash!(b"kernel32.dll"))
+            .unwrap_or(std::ptr::null_mut());
+
         if TLS_INDEX == 0 {
-            let r = dinvoke::tls_alloc();
+            let tls_alloc_ptr = crate::syscall::common::pe::get_export_by_hash(k32, crate::dbj2_hash!(b"TlsAlloc")).unwrap();
+            let tls_alloc: TlsAllocFn = std::mem::transmute(tls_alloc_ptr);
+            let r = tls_alloc();
             if r == TLS_OUT_OF_INDEXES {
                 return 0;
             }
@@ -142,12 +158,19 @@ pub fn get_cookie_value() -> usize {
             TLS_INDEX = r;
         }
 
-        let value = dinvoke::tls_get_value(TLS_INDEX) as *mut usize;
+        let tls_get_value_ptr = crate::syscall::common::pe::get_export_by_hash(k32, crate::dbj2_hash!(b"TlsGetValue")).unwrap();
+        let tls_get_value: TlsGetValueFn = std::mem::transmute(tls_get_value_ptr);
+
+        let value = tls_get_value(TLS_INDEX) as *mut usize;
         if value as usize == 0 {
-            let heap_region = dinvoke::local_alloc(0x0040, 8); // 0x0040 = LPTR
+            let local_alloc_ptr = crate::syscall::common::pe::get_export_by_hash(k32, crate::dbj2_hash!(b"LocalAlloc")).unwrap();
+            let local_alloc: LocalAllocFn = std::mem::transmute(local_alloc_ptr);
+            let heap_region = local_alloc(0x0040, 8); // 0x0040 = LPTR
 
             if heap_region != std::ptr::null_mut() {
-                let _ = dinvoke::tls_set_value(TLS_INDEX, heap_region);
+                let tls_set_value_ptr = crate::syscall::common::pe::get_export_by_hash(k32, crate::dbj2_hash!(b"TlsSetValue")).unwrap();
+                let tls_set_value: TlsSetValueFn = std::mem::transmute(tls_set_value_ptr);
+                let _ = tls_set_value(TLS_INDEX, heap_region);
             }
 
             return 0;

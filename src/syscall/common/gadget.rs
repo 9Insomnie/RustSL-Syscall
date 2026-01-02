@@ -1,9 +1,8 @@
 use super::*;
 use bitreader::BitReader;
-use dinvoke_rs::data::{
-    RuntimeFunction, ADD_RSP, JMP_RBX, PVOID, TLS_OUT_OF_INDEXES, UNW_FLAG_CHAININFO,
-    UNW_FLAG_EHANDLER,
-};
+use crate::ntapi::def::{TLS_OUT_OF_INDEXES, UNW_FLAG_CHAININFO, UNW_FLAG_EHANDLER};
+use crate::ntapi::types::PVOID;
+use crate::syscall::common::pe::{RuntimeFunction, ADD_RSP, JMP_RBX};
 use nanorand::{Rng, WyRand};
 
 pub unsafe fn find_gadget_in_module(module_base: *mut u8, pattern: &[u8]) -> Option<*mut u8> {
