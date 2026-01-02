@@ -7,4 +7,3 @@ input/*
 !input/calc.bin
 arsenal-kit/*
 .vscode/*
-src/forgery/bundle_data.rs
