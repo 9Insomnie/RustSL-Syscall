@@ -14,11 +14,10 @@ use std::collections::HashMap;
 use std::ffi::c_void;
 use std::mem::size_of;
 use std::sync::{Arc, Mutex};
-use windows::Win32::System::Threading::GetCurrentThread;
-use windows::Win32::{
-    Foundation::HANDLE,
-    System::{Memory::MEMORY_BASIC_INFORMATION, SystemInformation::SYSTEM_INFO},
-};
+use windows_sys::Win32::Foundation::HANDLE;
+use windows_sys::Win32::System::Memory::MEMORY_BASIC_INFORMATION;
+use windows_sys::Win32::System::SystemInformation::SYSTEM_INFO;
+use windows_sys::Win32::System::Threading::GetCurrentThread;
 
 extern "C" {
     pub fn spoof_call(structure: PVOID) -> PVOID;

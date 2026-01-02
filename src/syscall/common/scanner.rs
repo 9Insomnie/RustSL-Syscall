@@ -22,7 +22,7 @@ pub unsafe fn find_all_patterns(
         .collect()
 }
 
-pub fn get_cstr_len(pointer: *const char) -> usize {
+pub fn get_cstr_len(pointer: *const i8) -> usize {
     let mut tmp: u64 = pointer as u64;
     unsafe {
         while *(tmp as *const u8) != 0 {

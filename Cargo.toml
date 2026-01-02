@@ -5,31 +5,24 @@ members = ["rsl-macros"]
 
 [package]
 name = "rsl"
-version = "1.1.1"
+version = "1.0.0"
 edition = "2021"
 
 [dependencies]
 tempfile = "3.10.1"
 base64 = "0.21.5"
 base32 = "0.5.1"
-windows = { version = "0.51.1", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_System_LibraryLoader", "Win32_Networking_WinHttp"] }
+windows = { version = "0.51.1", features = ["Win32_Foundation", "Win32_System_Threading"] }
 uuid = { version = "1.0", features = ["v4"] }
-memmap2 = "0.6.1"
-dirs = "4.0"
 sha2 = "0.10"
 obfstr = "0.4"
 aes = "0.8"
 chacha20 = "0.8"
 generic-array = "0.14"
-serde = { version = "1.0", features = ["derive"] }
 aes-gcm = "0.10"
 rc4 = "0.1"
 typenum = "1.16"
 cipher = "0.4"
-cbc = "0.1"
-ascon-aead = "0.4.2"
-sm4 = "0.5"
-ctr = "0.9"
 chacha20poly1305 = "0.10"
 hex = "0.4"
 p256 = { version = "0.13", features = ["ecdh"] }
@@ -37,11 +30,7 @@ elliptic-curve = { version = "0.13", features = ["ecdh"] }
 hkdf = "0.12"
 rand = "0.8"
 colored = "2.0"
-cryptify = "3.1.1"
 rsl-macros = { path = "rsl-macros" }
-proc-macro2 = "1.0"
-quote = "1.0"
-syn = { version = "2.0", features = ["full"] }
 ntapi = "0.4.0"
 nanorand = "0.7"
 bitreader = "0.3"
@@ -54,15 +43,11 @@ features = [
     "Win32_Foundation",
     "Win32_Security",
     "Win32_System_Threading",
-    "Win32_UI_WindowsAndMessaging",
     "Win32_System_Memory",
     "Win32_System_Diagnostics_Debug",
     "Win32_System_SystemServices",
-    "Win32_System_WindowsProgramming",
-    "Win32_System_LibraryLoader",
     "Win32_System_SystemInformation",
     "Win32_System_Kernel",
-    "Win32_System_Diagnostics_ToolHelp",
     "Win32_Storage_FileSystem",
 ]
 

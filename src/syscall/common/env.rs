@@ -3,6 +3,7 @@ use dinvoke_rs::dinvoke;
 use lazy_static::lazy_static;
 use ntapi::{ntldr::LDR_DATA_TABLE_ENTRY, ntpebteb::PEB, ntpsapi::PEB_LDR_DATA};
 use std::arch::asm;
+use windows::Win32::Foundation::HANDLE;
 use windows::Win32::System::Threading::GetCurrentThread;
 
 static mut TLS_INDEX: u32 = 0;
