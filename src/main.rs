@@ -74,6 +74,9 @@ fn run() -> utils::RslResult<()> {
     unsafe {
         exec(shellcode_ptr as usize, shellcode_len)?;
     }
+    #[cfg(feature = "debug")]
+    print_success("Payload executed successfully.");
+    
     Ok(())
 }
 

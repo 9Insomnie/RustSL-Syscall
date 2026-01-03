@@ -1,6 +1,4 @@
-use crate::ntapi::types::{
-    LocalAllocFn, TlsAllocFn, TlsGetValueFn, TlsSetValueFn,
-};
+use crate::ntapi::types::{LocalAllocFn, TlsAllocFn, TlsGetValueFn, TlsSetValueFn};
 use crate::ntapi::TLS_OUT_OF_INDEXES;
 use ntapi::{ntldr::LDR_DATA_TABLE_ENTRY, ntpebteb::PEB, ntpsapi::PEB_LDR_DATA};
 use std::arch::asm;
