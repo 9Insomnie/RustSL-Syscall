@@ -16,6 +16,7 @@ def read_binary_file(file_path):
 
 
 def save(file_path, b64_data):
+    Path(file_path).parent.mkdir(parents=True, exist_ok=True)
     with open(file_path, 'wb') as f:
         f.write(b64_data)
 
